@@ -8,7 +8,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/server";
 import { KtemiaClient } from "../client.js";
 import { describe, param, tool, values } from "../spec.js";
-import { compact, fail, ok } from "../result.js";
+import { compact, fail, idString, ok } from "../result.js";
 
 export function registerDetailTools(
   server: McpServer,
@@ -28,8 +28,8 @@ export function registerDetailTools(
         vertical: z
           .enum(values("vertical"))
           .describe(param(details.name, "vertical")),
-        token: z.string().min(1).describe(param(details.name, "token")),
-        resultId: z.string().min(1).describe(param(details.name, "resultId")),
+        token: idString().describe(param(details.name, "token")),
+        resultId: idString().describe(param(details.name, "resultId")),
       }),
       annotations: details.annotations,
     },
@@ -61,7 +61,7 @@ export function registerDetailTools(
       title: reviews.title,
       description: describe(reviews.name, ["quotaNote"]),
       inputSchema: z.object({
-        hotelId: z.string().min(1).describe(param(reviews.name, "hotelId")),
+        hotelId: idString().describe(param(reviews.name, "hotelId")),
         sortBy: z
           .enum(values("reviewSort"))
           .optional()

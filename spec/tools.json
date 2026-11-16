@@ -50,7 +50,7 @@
     {
       "name": "ktemia_lookup",
       "title": "Look up airport, airline, or location codes",
-      "description": "Resolve a plain-language place or airline name into the codes the search tools need. Use kind='airport' for flight origins and destinations (returns IATA airport codes such as LHR, and city codes such as LON that cover every airport in a metro area), kind='airline' for two-letter carrier codes, kind='hotelLocation' for a hotel search location id, and kind='carLocation' for a rental pickup location id. Hotel and car searches require an id from this tool rather than a free-text place name. Resolve an ambiguous name here instead of guessing a code.",
+      "description": "Resolve a plain-language place or airline name into the codes the search tools need. Use kind='airport' for flight origins and destinations (returns IATA airport codes such as LHR, and city codes such as LON that cover every airport in a metro area), kind='airline' for two-letter carrier codes, kind='hotelLocation' for a hotel search location id, and kind='carLocation' for a rental pickup location id. Flight searches take the code field; hotel and car searches take the locationId field, which is a numeric string and not a city name. Resolve an ambiguous name here instead of guessing a code.",
       "annotations": {
         "readOnlyHint": true,
         "destructiveHint": false,
@@ -160,7 +160,7 @@
           "description": "Read the next page of an existing search. When set, every other parameter is ignored."
         },
         "location": {
-          "description": "Location id from ktemia_lookup with kind='hotelLocation'."
+          "description": "Location id from ktemia_lookup with kind='hotelLocation' - the locationId field of a result, for example '29230'."
         },
         "checkin": {
           "description": "Check-in date as YYYY-MM-DD."
@@ -227,7 +227,7 @@
           "description": "Read the next page of an existing search. When set, every other parameter is ignored."
         },
         "pickupLocation": {
-          "description": "Pickup location id from ktemia_lookup with kind='carLocation'."
+          "description": "Pickup location id from ktemia_lookup with kind='carLocation' - the locationId field of a result."
         },
         "dropoffLocation": {
           "description": "Drop-off location id. Omit to return the car where it was collected."

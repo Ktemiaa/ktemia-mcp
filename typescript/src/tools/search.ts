@@ -12,7 +12,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/server";
 import { KtemiaClient, KtemiaError } from "../client.js";
 import { describe, param, tool, values } from "../spec.js";
-import { compact, fail, ok } from "../result.js";
+import { compact, fail, idString, ok } from "../result.js";
 
 /** A page of results, as every vertical returns it. */
 interface ResultsPage {
@@ -233,8 +233,7 @@ export function registerSearchTools(
           .string()
           .optional()
           .describe(param(hotels.name, "nextToken")),
-        location: z
-          .string()
+        location: idString()
           .optional()
           .describe(param(hotels.name, "location")),
         checkin: z.string().optional().describe(param(hotels.name, "checkin")),
@@ -357,12 +356,10 @@ export function registerSearchTools(
           .string()
           .optional()
           .describe(param(cars.name, "nextToken")),
-        pickupLocation: z
-          .string()
+        pickupLocation: idString()
           .optional()
           .describe(param(cars.name, "pickupLocation")),
-        dropoffLocation: z
-          .string()
+        dropoffLocation: idString()
           .optional()
           .describe(param(cars.name, "dropoffLocation")),
         pickupDate: z

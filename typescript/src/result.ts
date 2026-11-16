@@ -3,6 +3,7 @@
  */
 
 import { KtemiaError } from "./client.js";
+import { z } from "zod";
 
 /**
  * Every tool here reads live provider data. Nothing writes, nothing deletes,
@@ -79,6 +80,24 @@ export function compact<T extends Record<string, unknown>>(obj: T): Partial<T> {
     if (value !== undefined && value !== null) out[key] = value;
   }
   return out as Partial<T>;
+}
+
+/**
+ * A schema for identifier fields, accepting a number as well as a string.
+ *
+ * Several Ktemia identifiers are numeric strings - a hotel location id is
+ * "29230" - and a model that copies one out of a lookup result will often
+ * emit it unquoted. A bare `z.string()` rejects that with a validation error
+ * the model cannot act on, since from its point of view it passed the id it
+ * was given. Numbers are accepted and stringified instead.
+ *
+ * Deliberately not used for dates or times: "2027-01-15" is never a number,
+ * and coercing there would hide a genuinely malformed argument.
+ */
+export function idString() {
+  return z
+    .union([z.string().min(1), z.number()])
+    .transform((value) => String(value));
 }
 
 /**
