@@ -1,0 +1,52 @@
+{
+  "name": "@ktemia/mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server for the Ktemia travel search API - flights, hotels, and cars across 100+ providers",
+  "license": "MIT",
+  "author": "Ktemia",
+  "homepage": "https://www.ktemia.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ktemiaa/ktemia-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Ktemiaa/ktemia-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "ktemia",
+    "travel",
+    "flights",
+    "hotels",
+    "car-rental"
+  ],
+  "type": "module",
+  "bin": {
+    "ktemia-mcp": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc && node scripts/sync-spec.mjs",
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "inspect:modern": "npx @modelcontextprotocol/inspector --cli node dist/index.js --protocol-era modern --method tools/list",
+    "inspect:legacy": "npx @modelcontextprotocol/inspector --cli node dist/index.js --protocol-era legacy --method tools/list"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.4.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}

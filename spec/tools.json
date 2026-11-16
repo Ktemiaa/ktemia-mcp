@@ -1,0 +1,353 @@
+{
+  "specVersion": 1,
+  "_comment": [
+    "Single source of truth for tool names, prose, enums, and defaults.",
+    "Both the TypeScript and Python servers read this file, so an agent sees",
+    "identical tool behaviour whether it was installed with npx or uvx.",
+    "Validation schemas stay native (zod / pydantic); only the shared contract",
+    "lives here. A parity test asserts both implementations expose exactly the",
+    "tool and parameter names below."
+  ],
+  "shared": {
+    "quotaNote": "Costs one API request against the account's monthly quota. Starting a search and reading each page are separate requests.",
+    "tokenLifetimeNote": "Tokens are opaque and expire one hour after the search starts. Page through with the nextToken from the previous page; when nextToken is absent there are no more pages. If a token has expired, start a new search rather than retrying the same token.",
+    "askDoNotGuessNote": "Ask the user for anything missing rather than guessing. A guessed city or date searches the wrong trip, spends quota, and returns confident nonsense.",
+    "quotaErrorNote": "On QUOTA_EXCEEDED, stop: the monthly allowance is gone and retrying cannot help. On RATE_LIMIT_EXCEEDED, wait for the Retry-After interval and retry; that one is only a speed limit.",
+    "searchNotBookNote": "Ktemia searches and compares. It does not book, hold, or pay for anything. Booking links in the results hand off to the provider's own site."
+  },
+  "enums": {
+    "cabin": ["economy", "premiumEconomy", "business", "first"],
+    "alliance": ["oneworld", "skyteam", "starAlliance"],
+    "sortOrder": ["asc", "desc"],
+    "flightSortBy": ["bestValue", "price", "duration", "departure", "arrival"],
+    "hotelSortBy": ["bestValue", "price", "rating", "stars", "distance"],
+    "carSortBy": ["bestValue", "price", "rating", "distance"],
+    "carClass": ["small", "medium", "large", "suv", "van", "pickup", "luxury", "convertible"],
+    "transmission": ["automatic", "manual"],
+    "priceMode": ["total", "perDay"],
+    "locationType": ["city", "airport", "all"],
+    "reviewSort": ["recent", "oldest", "highestScore", "lowestScore"],
+    "lookupKind": ["airport", "airline", "hotelLocation", "carLocation"],
+    "vertical": ["flights", "hotels", "cars"]
+  },
+  "limits": {
+    "maxPassengersPerType": 9,
+    "searchTokenTtlSeconds": 3600
+  },
+  "tools": [
+    {
+      "name": "ktemia_key_status",
+      "title": "Check Ktemia plan and remaining quota",
+      "description": "Report the plan, rate limits, and remaining monthly request quota for the configured API key. This is the only Ktemia call that is free: it does not count against the quota, and it keeps answering after the quota is spent, so it is how you diagnose a QUOTA_EXCEEDED error and find the reset date. Call it before a long run of searches to check the budget. The quota is shared across every key on an account, so adding a key does not add requests.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "params": {}
+    },
+    {
+      "name": "ktemia_lookup",
+      "title": "Look up airport, airline, or location codes",
+      "description": "Resolve a plain-language place or airline name into the codes the search tools need. Use kind='airport' for flight origins and destinations (returns IATA airport codes such as LHR, and city codes such as LON that cover every airport in a metro area), kind='airline' for two-letter carrier codes, kind='hotelLocation' for a hotel search location id, and kind='carLocation' for a rental pickup location id. Hotel and car searches require an id from this tool rather than a free-text place name. Resolve an ambiguous name here instead of guessing a code.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "params": {
+        "kind": {
+          "description": "What to resolve. Flight searches need 'airport'; hotel and car searches need 'hotelLocation' and 'carLocation'.",
+          "enum": "lookupKind",
+          "required": true
+        },
+        "query": {
+          "description": "Place, airport, or airline name, for example 'London' or 'Delta'.",
+          "required": true
+        },
+        "type": {
+          "description": "For kind='carLocation' only: narrow to city centres or airports.",
+          "enum": "locationType",
+          "default": "city"
+        },
+        "country": {
+          "description": "Two-letter market code (ISO 3166-1 alpha-2) biasing results, for example 'GB'."
+        },
+        "locale": {
+          "description": "Language for returned names.",
+          "default": "en"
+        }
+      }
+    },
+    {
+      "name": "ktemia_search_flights",
+      "title": "Search flights",
+      "description": "Search and compare flights across providers. Call with trip details to start a search and read the first page; call again with only nextToken to read the next page. A trip is either one-way or return (origin, destination, departureDate, optional returnDate) or multi-city (legs). The two forms are mutually exclusive. Origins and destinations are IATA airport or city codes - use ktemia_lookup to resolve a place name first.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "params": {
+        "nextToken": {
+          "description": "Read the next page of an existing search. When set, every other parameter is ignored."
+        },
+        "origin": {
+          "description": "Departure IATA airport or city code, for example 'LHR' or 'LON'."
+        },
+        "destination": {
+          "description": "Arrival IATA airport or city code, for example 'JFK' or 'NYC'."
+        },
+        "departureDate": {
+          "description": "Outbound date as YYYY-MM-DD. Must not be in the past."
+        },
+        "returnDate": {
+          "description": "Return date as YYYY-MM-DD for a round trip. Omit for one-way."
+        },
+        "legs": {
+          "description": "Multi-city itinerary as a list of { origin, destination, date }, in travel order. Mutually exclusive with origin/destination/departureDate."
+        },
+        "cabin": {
+          "description": "Cabin class to price.",
+          "enum": "cabin",
+          "default": "economy"
+        },
+        "passengers": {
+          "description": "Traveller counts by fare type: adults (18-64), seniors (65+), students, youths (12-17), children (2-11), infantsInSeat, infantsOnLap. Defaults to one adult. Maximum 9 per type."
+        },
+        "maxStops": {
+          "description": "Maximum stops per leg. 0 is non-stop only."
+        },
+        "airlines": {
+          "description": "Restrict to these two-letter IATA airline codes."
+        },
+        "alliances": {
+          "description": "Restrict to these airline alliances.",
+          "enum": "alliance"
+        },
+        "maxPrice": {
+          "description": "Drop results above this total price."
+        },
+        "sortBy": {
+          "description": "Result ordering.",
+          "enum": "flightSortBy",
+          "default": "bestValue"
+        },
+        "sortOrder": {
+          "description": "Sort direction.",
+          "enum": "sortOrder"
+        },
+        "country": {
+          "description": "Two-letter market code to price in, for example 'US'."
+        }
+      }
+    },
+    {
+      "name": "ktemia_search_hotels",
+      "title": "Search hotels and stays",
+      "description": "Search and compare hotels and other stays across providers. Call with stay details to start a search and read the first page; call again with only nextToken for the next page. The location must be an id from ktemia_lookup with kind='hotelLocation' - a free-text city name is not accepted.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "params": {
+        "nextToken": {
+          "description": "Read the next page of an existing search. When set, every other parameter is ignored."
+        },
+        "location": {
+          "description": "Location id from ktemia_lookup with kind='hotelLocation'."
+        },
+        "checkin": {
+          "description": "Check-in date as YYYY-MM-DD."
+        },
+        "checkout": {
+          "description": "Check-out date as YYYY-MM-DD. Must be after checkin."
+        },
+        "adults": {
+          "description": "Number of adults.",
+          "default": 2
+        },
+        "rooms": {
+          "description": "Number of rooms.",
+          "default": 1
+        },
+        "childAges": {
+          "description": "Ages of children sharing the room, as a list of years."
+        },
+        "minStars": {
+          "description": "Minimum star rating, 1 to 5."
+        },
+        "minRating": {
+          "description": "Minimum guest review score."
+        },
+        "maxPrice": {
+          "description": "Drop results above this price."
+        },
+        "freeCancellation": {
+          "description": "Only rates that can be cancelled free of charge.",
+          "default": false
+        },
+        "amenities": {
+          "description": "Required amenities, for example 'wifi' or 'pool'."
+        },
+        "providers": {
+          "description": "Restrict to these booking providers."
+        },
+        "sortBy": {
+          "description": "Result ordering.",
+          "enum": "hotelSortBy",
+          "default": "bestValue"
+        },
+        "sortOrder": {
+          "description": "Sort direction.",
+          "enum": "sortOrder"
+        },
+        "country": {
+          "description": "Two-letter market code to price in."
+        }
+      }
+    },
+    {
+      "name": "ktemia_search_cars",
+      "title": "Search rental cars",
+      "description": "Search and compare rental cars across agencies. Call with rental details to start a search and read the first page; call again with only nextToken for the next page. The pickup location must be an id from ktemia_lookup with kind='carLocation'. Omit dropoffLocation for a same-location return.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "params": {
+        "nextToken": {
+          "description": "Read the next page of an existing search. When set, every other parameter is ignored."
+        },
+        "pickupLocation": {
+          "description": "Pickup location id from ktemia_lookup with kind='carLocation'."
+        },
+        "dropoffLocation": {
+          "description": "Drop-off location id. Omit to return the car where it was collected."
+        },
+        "pickupDate": {
+          "description": "Pickup date as YYYY-MM-DD."
+        },
+        "dropoffDate": {
+          "description": "Drop-off date as YYYY-MM-DD. Must be on or after pickupDate."
+        },
+        "pickupTime": {
+          "description": "Pickup time as HH:MM, 24-hour.",
+          "default": "12:00"
+        },
+        "dropoffTime": {
+          "description": "Drop-off time as HH:MM, 24-hour.",
+          "default": "12:00"
+        },
+        "driverAge": {
+          "description": "Driver age. Under 25 often carries a young-driver surcharge."
+        },
+        "carClass": {
+          "description": "Restrict to these vehicle classes.",
+          "enum": "carClass"
+        },
+        "transmission": {
+          "description": "Gearbox type. Relevant outside North America, where manual is common.",
+          "enum": "transmission"
+        },
+        "maxPrice": {
+          "description": "Drop results above this price."
+        },
+        "providers": {
+          "description": "Restrict to these booking providers."
+        },
+        "agencies": {
+          "description": "Restrict to these rental agencies, for example 'Hertz'."
+        },
+        "sortBy": {
+          "description": "Result ordering.",
+          "enum": "carSortBy",
+          "default": "bestValue"
+        },
+        "sortOrder": {
+          "description": "Sort direction.",
+          "enum": "sortOrder"
+        },
+        "priceMode": {
+          "description": "Whether prices are the rental total or a daily rate.",
+          "enum": "priceMode",
+          "default": "total"
+        },
+        "country": {
+          "description": "Two-letter market code to price in."
+        }
+      }
+    },
+    {
+      "name": "ktemia_get_details",
+      "title": "Get full prices and booking links for one result",
+      "description": "Expand a single search result into every available price and booking link. Pass the vertical, the token from the search that produced the result, and that result's id. Use this when the user has chosen a candidate and wants the real price or a way to book, since search pages carry only the leading offers.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "params": {
+        "vertical": {
+          "description": "Which search the result came from.",
+          "enum": "vertical",
+          "required": true
+        },
+        "token": {
+          "description": "The searchToken or nextToken of the page the result appeared on.",
+          "required": true
+        },
+        "resultId": {
+          "description": "The id of the chosen result, taken from the search response.",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "ktemia_get_hotel_reviews",
+      "title": "Get guest reviews for a hotel",
+      "description": "Read guest reviews for one hotel, with optional filters and paging. Use it to answer qualitative questions - whether the breakfast is worth it, how the rooms sound at night - that a price comparison cannot settle. Pages are numbered here, unlike the token-based search tools.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "params": {
+        "hotelId": {
+          "description": "Hotel id from a hotel search result or its details.",
+          "required": true
+        },
+        "sortBy": {
+          "description": "Review ordering.",
+          "enum": "reviewSort",
+          "default": "recent"
+        },
+        "travelerTypes": {
+          "description": "Restrict to reviewer types, for example 'family' or 'business'."
+        },
+        "months": {
+          "description": "Only reviews from the last N months."
+        },
+        "sources": {
+          "description": "Restrict to these review sources."
+        },
+        "search": {
+          "description": "Only reviews containing this phrase, for example 'air conditioning'."
+        },
+        "page": {
+          "description": "Page number, starting at 1.",
+          "default": 1
+        }
+      }
+    }
+  ]
+}
