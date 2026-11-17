@@ -8,9 +8,16 @@ __pycache__/
 .venv/
 venv/
 build/
+dist/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
+uv.lock
+
+# Copied in from spec/tools.json by scripts/sync_spec.py at build time. The
+# original is the tracked one; a committed copy would be a second source of
+# truth that could disagree with it.
+python/src/ktemia_mcp/tools.json
 
 .DS_Store
 .env

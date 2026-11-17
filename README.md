@@ -1,6 +1,8 @@
 # Ktemia MCP server
 
-A [Model Context Protocol](https://modelcontextprotocol.io/) server that searches and compares flights, hotels, and rental cars with the [Ktemia](https://www.ktemia.com/) [API](https://www.ktemia.com/docs/api/). Point Cursor, Claude Code, Claude Desktop, or any MCP client at it, ask in plain language, and the agent looks up the place, runs the search, and returns each seller's price with a booking link.
+A [Model Context Protocol](https://modelcontextprotocol.io/) server that searches and compares flights, hotels, and rental cars with the [Ktemia](https://www.ktemia.com/) [API](https://www.ktemia.com/docs/api/). Point Cursor, Claude Code, Claude Desktop, Codex, or any MCP client at it, ask in plain language, and the agent looks up the place, runs the search, and returns each seller's price with a booking link.
+
+Available for both Node (`npx -y @ktemia/mcp`) and Python (`uvx ktemia-mcp`).
 
 Ktemia compares prices. It does not book the ticket, the car, or the room. The traveller books on the seller's site.
 
@@ -16,9 +18,24 @@ Ktemia compares prices. It does not book the ticket, the car, or the room. The t
 
 Every plan can use the MCP server, including the [Free plan](https://www.ktemia.com/pricing/) with its 100 requests a month. A paid plan buys request volume and rate, not access.
 
+## Two packages, one behaviour
+
+The server ships in both languages, so you can run it with whichever runtime your machine already has:
+
+| | Package | Command | Needs |
+| --- | --- | --- | --- |
+| **Node** | [`@ktemia/mcp`](https://www.npmjs.com/package/@ktemia/mcp) | `npx -y @ktemia/mcp` | Node 20+ |
+| **Python** | [`ktemia-mcp`](https://pypi.org/project/ktemia-mcp/) | `uvx ktemia-mcp` | Python 3.10+ and [`uv`](https://docs.astral.sh/uv/) |
+
+They are not two codebases that happen to agree. Both read one shared contract, [`spec/tools.json`](spec/tools.json), for every tool name, description, enum, and limit, and CI fails if they drift. Same seven tools, same wording, same errors — pick either.
+
+`npx` and `uvx` both fetch the package on first run and cache it, so there is nothing to install or upgrade by hand.
+
 ## Install
 
 You need an API key from [app.ktemia.com](https://app.ktemia.com). Free, no card.
+
+Each example below shows Node first, then Python. Use one, not both — two copies of the same server would just show every tool twice.
 
 ### Cursor
 
@@ -30,6 +47,20 @@ Add to `~/.cursor/mcp.json` (every project) or `.cursor/mcp.json` (one project):
     "ktemia": {
       "command": "npx",
       "args": ["-y", "@ktemia/mcp"],
+      "env": { "KTEMIA_API_KEY": "${env:KTEMIA_API_KEY}" }
+    }
+  }
+}
+```
+
+Python instead:
+
+```json
+{
+  "mcpServers": {
+    "ktemia": {
+      "command": "uvx",
+      "args": ["ktemia-mcp"],
       "env": { "KTEMIA_API_KEY": "${env:KTEMIA_API_KEY}" }
     }
   }
@@ -50,6 +81,14 @@ To paste the key directly instead, put it in `~/.cursor/mcp.json` rather than a 
 claude mcp add ktemia -e KTEMIA_API_KEY=your-key -- npx -y @ktemia/mcp
 ```
 
+Python instead:
+
+```bash
+claude mcp add ktemia -e KTEMIA_API_KEY=your-key -- uvx ktemia-mcp
+```
+
+Everything after `--` is the command Claude Code runs. Check it with `claude mcp list`.
+
 ### Claude Desktop
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS, or `%APPDATA%\Claude\claude_desktop_config.json` on Windows:
@@ -66,13 +105,47 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` on macO
 }
 ```
 
+Python instead: `"command": "uvx"`, `"args": ["ktemia-mcp"]`.
+
 Restart Claude Desktop, then ask for a flight.
+
+Claude Desktop launches servers from a GUI process that does not read your shell profile, so `npx` or `uvx` must be somewhere it can see. If the server fails to start, use the absolute path from `which npx` or `which uvx` as `command`.
+
+### Codex CLI
+
+Add to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.ktemia]
+command = "npx"
+args = ["-y", "@ktemia/mcp"]
+env = { KTEMIA_API_KEY = "your-key" }
+```
+
+Python instead:
+
+```toml
+[mcp_servers.ktemia]
+command = "uvx"
+args = ["ktemia-mcp"]
+env = { KTEMIA_API_KEY = "your-key" }
+```
 
 ### Any other MCP client
 
-The server speaks MCP over stdio. Run `npx -y @ktemia/mcp` with `KTEMIA_API_KEY` in the environment.
+The server speaks MCP over stdio. Run `npx -y @ktemia/mcp` or `uvx ktemia-mcp` with `KTEMIA_API_KEY` in the environment.
 
 It negotiates the protocol revision per connection, so it answers both current (`2026-07-28`) clients and clients that still open with the older `initialize` handshake.
+
+### Check it before wiring it up
+
+Run the command in a terminal first:
+
+```bash
+KTEMIA_API_KEY=your-key npx -y @ktemia/mcp     # or: uvx ktemia-mcp
+```
+
+It should sit silently waiting for JSON-RPC on stdin; `Ctrl-C` to quit. An immediate error means the environment is wrong, and reading it here is easier than digging through a client's logs.
 
 ## Try it
 
@@ -132,13 +205,28 @@ Until then, run it locally over stdio as above.
 
 ```bash
 git clone https://github.com/Ktemiaa/ktemia-mcp.git
-cd ktemia-mcp/typescript
+cd ktemia-mcp
+```
+
+**TypeScript**
+
+```bash
+cd typescript
 npm install
 npm run build
 npm test
 ```
 
-Point your client at the built entry point:
+**Python**
+
+```bash
+cd python
+uv sync
+uv run python scripts/sync_spec.py   # copies spec/tools.json into the package
+uv run pytest
+```
+
+Point your client at whichever you built:
 
 ```json
 {
@@ -152,31 +240,49 @@ Point your client at the built entry point:
 }
 ```
 
+For Python, `"command": "uv"` with `"args": ["--directory", "/absolute/path/to/ktemia-mcp/python", "run", "ktemia-mcp"]`.
+
 ### Layout
 
 ```
 spec/tools.json   shared tool contract: names, descriptions, enums, defaults
 typescript/       the npm package, @ktemia/mcp
-python/           the PyPI package, ktemia-mcp (not yet published)
+python/           the PyPI package, ktemia-mcp
 ```
 
 Tool names, descriptions, enums, and defaults live in `spec/tools.json`, which both implementations read. The descriptions are what steer an agent — text like "a guessed city searches the wrong trip and spends quota" is what stops it inventing a departure airport — so they are written once rather than copied, since prose that drifts between two packages would change agent behaviour with nothing in any log to show why.
 
+Each package copies that file in at build time, because neither npm nor a Python wheel can include a file from outside its own directory. `typescript/scripts/sync-spec.mjs` and `python/scripts/sync_spec.py` do that, and CI asserts both copies are byte-identical to the original.
+
 ### Tests
+
+**TypeScript**
 
 ```bash
 npm test          # offline, deterministic, no key needed
 npm run test:live # opt-in, spends real quota
 ```
 
-The offline suite stubs `fetch`, so it covers things production cannot reach — a spent quota, a rate limit, a timeout, a malformed upstream body — and asserts that a missing required field is refused locally without an upstream call, so a guessed search cannot cost you a request.
+**Python**
 
-The live suite runs only when `KTEMIA_API_KEY` is set, and reads it from a gitignored `.env.local` if present. It exists to catch upstream contract drift: a renamed field would pass every stubbed test and break every real agent. A full pass is about a dozen requests.
+```bash
+uv run pytest                      # offline; the live tests skip themselves
+KTEMIA_API_KEY=your-key uv run pytest tests/test_live.py
+uv run python scripts/smoke_wheel.py   # checks an installed build can start
+```
+
+The offline suites stub the transport, so they cover what production cannot reach on demand — a spent quota, a rate limit, a timeout, a malformed upstream body — and assert that a missing required field is refused locally without an upstream call, so a guessed search cannot cost you a request.
+
+`python/tests/test_parity.py` is the one that keeps the packages honest: it asserts both register the same seven tools in the same order, that every description contains the shared spec's prose verbatim, that every metered tool says so and `ktemia_key_status` does not, and that no numeric parameter advertises an absurd bound.
+
+The live suites run only when `KTEMIA_API_KEY` is set. They exist to catch upstream contract drift: a renamed field would pass every stubbed test and break every real agent. A full pass is about a dozen requests per language.
 
 ```bash
 npm run inspect:modern   # tools/list over the 2026-07-28 protocol
 npm run inspect:legacy   # tools/list over the older initialize handshake
 ```
+
+Both servers negotiate the protocol era per connection. The Python SDK does this in its stdio loop; the TypeScript one needs `serveStdio`, and the hand-wired transport silently serves 2025-era clients only, which is why CI checks both eras explicitly.
 
 ## Learn more
 

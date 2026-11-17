@@ -1,0 +1,62 @@
+[project]
+name = "ktemia-mcp"
+version = "0.1.0"
+description = "Model Context Protocol server for the Ktemia travel search API - flights, hotels, and cars across 100+ providers"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Ktemia" }]
+requires-python = ">=3.10"
+keywords = ["mcp", "modelcontextprotocol", "ktemia", "travel", "flights", "hotels", "car-rental"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+  # 2.x renamed FastMCP to MCPServer; the 1.x API does not work here.
+  "mcp>=2.3.0,<3",
+  "httpx>=0.27",
+]
+
+[project.urls]
+Homepage = "https://www.ktemia.com"
+Repository = "https://github.com/Ktemiaa/ktemia-mcp"
+Issues = "https://github.com/Ktemiaa/ktemia-mcp/issues"
+Documentation = "https://www.ktemia.com/docs/api/"
+
+[project.scripts]
+ktemia-mcp = "ktemia_mcp.__main__:main"
+
+[dependency-groups]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "ruff>=0.8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ktemia_mcp"]
+
+# The shared tool contract lives at the repository root so both packages read
+# one file. Hatch cannot reference a path outside the project directory, so the
+# build copies it in; see scripts/sync_spec.py, run by the build hook below.
+[tool.hatch.build.targets.wheel.force-include]
+"src/ktemia_mcp/tools.json" = "ktemia_mcp/tools.json"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

@@ -98,6 +98,61 @@ header values are visible to network intermediaries.
 Upstream calls carry `X-Ktemia-Client: mcp/<version>` so MCP traffic is
 attributable in our own logs.
 
+## Python SDK: verified differences from TypeScript
+
+Checked against `mcp` 2.3.0 on 2026-11-17 by probing the installed package,
+not from memory. The two SDKs are not symmetric, and three of these shaped the
+implementation:
+
+- **`FastMCP` is gone.** 2.x renamed it to `MCPServer`
+  (`from mcp.server.mcpserver import MCPServer`). Importing
+  `mcp.server.fastmcp` raises with a migration pointer.
+- **Model fields are snake_case.** `tool.input_schema`, not `inputSchema`, and
+  `annotations.read_only_hint`, not `readOnlyHint`. Constructors still accept
+  the camelCase wire aliases, so `ToolAnnotations(readOnlyHint=True)` works
+  while reading it back as `.readOnlyHint` raises.
+- **Dual-era negotiation is the default.** `run_stdio_async` delegates to
+  `serve_dual_era_loop`, which picks the era from the client's first request.
+  There is no equivalent of the TypeScript trap where the hand-wired transport
+  silently serves 2025-era clients only. Both eras were verified end to end
+  against the built wheel.
+
+### Why handlers return `CallToolResult` instead of raising
+
+The idiomatic Python form is to raise `ToolError`, but both raising paths lose
+information the model needs:
+
+- `raise ToolError(payload)` prefixes the message with
+  `Error executing tool <name>:`, which corrupts the JSON error envelope the
+  TypeScript server emits verbatim.
+- Raising anything else is treated as a crash: the model receives only
+  `Error executing tool <name>`, discarding the quota-versus-rate-limit
+  guidance that is the entire reason those messages are written as they are.
+
+Returning the result keeps both packages byte-identical for the same failure.
+`test_quota_error_reaches_the_model_intact` pins this.
+
+### Known asymmetry: no `outputSchema` in Python
+
+A function annotated `-> CallToolResult` publishes no `outputSchema`, and the
+SDK rejects `KeyOut | CallToolResult` with
+`CallToolResult cannot be used in Union or Optional types`. So
+`ktemia_key_status` declares an `outputSchema` in TypeScript and does not in
+Python.
+
+This is the lesser of the two evils: `outputSchema` is optional in the spec,
+whereas truncated error prose directly causes an agent to retry an exhausted
+quota. Both packages still return `structuredContent` on success, which is
+what hosts actually read. If the SDK later allows an explicit output schema
+alongside a returned result, close the gap here first.
+
+### Annotations must not be deferred
+
+`server.py` deliberately omits `from __future__ import annotations`. With it,
+every annotation becomes a string that the SDK re-evaluates in module scope,
+where the per-tool spec locals the `Field` descriptions are built from do not
+exist — a `NameError` at import time.
+
 ## Deviation: API key on the hosted transport (documented on purpose)
 
 The hosted server at `mcp.ktemia.com` will accept `X-API-Key` from the client

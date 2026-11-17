@@ -42,3 +42,65 @@ jobs:
 
       - name: Tools list over legacy protocol
         run: npm run inspect:legacy
+
+  python:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python
+    strategy:
+      # The floor and the ceiling. A 3.10-only syntax error or a 3.13
+      # deprecation would otherwise surface as a user's install failure.
+      matrix:
+        python-version: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync the shared tool spec
+        run: uv run python scripts/sync_spec.py
+
+      - name: Lint
+        run: uvx ruff check src tests scripts
+
+      - name: Test
+        run: uv run --python ${{ matrix.python-version }} pytest
+
+      # The wheel is what users actually get. A missing tools.json here is a
+      # server that cannot start, and it would not show up in the tests above,
+      # which read the file from the source tree.
+      - name: Build and verify the wheel runs standalone
+        run: |
+          uv build
+          uv run --isolated --no-project --with dist/*.whl \
+            python scripts/smoke_wheel.py
+
+  # Both packages read spec/tools.json, so a change to one package's prose
+  # without the other is the failure mode this repo is structured to prevent.
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: typescript/package-lock.json
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Build the TypeScript package
+        working-directory: typescript
+        run: npm ci && npm run build
+
+      - name: Assert both packages ship the same contract
+        working-directory: python
+        run: |
+          uv run python scripts/sync_spec.py
+          uv run pytest tests/test_parity.py -v
