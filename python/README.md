@@ -187,7 +187,6 @@ The server is open source: [github.com/Ktemiaa/ktemia-mcp](https://github.com/Kt
 git clone https://github.com/Ktemiaa/ktemia-mcp.git
 cd ktemia-mcp/python
 uv sync
-uv run python scripts/sync_spec.py   # copies spec/tools.json into the package
 uv run pytest
 ```
 

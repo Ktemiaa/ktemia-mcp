@@ -2,10 +2,11 @@
 
 ``spec/tools.json`` lives at the repo root so the TypeScript package reads the
 same file. A wheel cannot include files from outside its project directory, so
-the build copies it in. Both servers therefore ship identical prose.
+it has to be copied in. ``hatch_build.py`` does that during a real build; this
+script is the standalone version, used by the test suite's conftest to refresh
+the copy when the spec changes without a reinstall.
 
-Run by ``make -C python build``, by the test suite's conftest, and by CI before
-packaging. Mirrors ``typescript/scripts/sync-spec.mjs``.
+Mirrors ``typescript/scripts/sync-spec.mjs``.
 """
 
 from __future__ import annotations

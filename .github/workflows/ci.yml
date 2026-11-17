@@ -60,9 +60,6 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Sync the shared tool spec
-        run: uv run python scripts/sync_spec.py
-
       - name: Lint
         run: uvx ruff check src tests scripts
 
@@ -101,6 +98,4 @@ jobs:
 
       - name: Assert both packages ship the same contract
         working-directory: python
-        run: |
-          uv run python scripts/sync_spec.py
-          uv run pytest tests/test_parity.py -v
+        run: uv run pytest tests/test_parity.py -v

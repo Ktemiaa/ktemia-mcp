@@ -7,7 +7,7 @@ language: only the shared contract comes from here.
 Mirrors ``typescript/src/spec.ts``, including the error messages, so a broken
 spec reads the same whichever package hits it first.
 
-The file is copied into the package at build time (see ``scripts/sync_spec.py``)
+The file is copied into the package during the build (see ``hatch_build.py``)
 so it ships inside the published wheel.
 """
 
@@ -29,8 +29,8 @@ def _load() -> dict[str, Any]:
     except OSError as cause:
         raise RuntimeError(
             f"Could not read the shared tool spec at {path}. The build copies "
-            f"spec/tools.json into the package; run python scripts/sync_spec.py. "
-            f"({cause})"
+            f"spec/tools.json into the package; reinstall, or run "
+            f"python scripts/sync_spec.py from a checkout. ({cause})"
         ) from cause
     parsed = json.loads(raw)
     if parsed.get("specVersion") != SPEC_VERSION:

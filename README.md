@@ -221,8 +221,7 @@ npm test
 
 ```bash
 cd python
-uv sync
-uv run python scripts/sync_spec.py   # copies spec/tools.json into the package
+uv sync          # also copies spec/tools.json into the package
 uv run pytest
 ```
 
@@ -252,7 +251,7 @@ python/           the PyPI package, ktemia-mcp
 
 Tool names, descriptions, enums, and defaults live in `spec/tools.json`, which both implementations read. The descriptions are what steer an agent — text like "a guessed city searches the wrong trip and spends quota" is what stops it inventing a departure airport — so they are written once rather than copied, since prose that drifts between two packages would change agent behaviour with nothing in any log to show why.
 
-Each package copies that file in at build time, because neither npm nor a Python wheel can include a file from outside its own directory. `typescript/scripts/sync-spec.mjs` and `python/scripts/sync_spec.py` do that, and CI asserts both copies are byte-identical to the original.
+Each package copies that file in at build time, because neither npm nor a Python wheel can include a file from outside its own directory. `typescript/scripts/sync-spec.mjs` and `python/hatch_build.py` do that, and CI asserts both copies are byte-identical to the original.
 
 ### Tests
 

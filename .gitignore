@@ -14,9 +14,9 @@ dist/
 .ruff_cache/
 uv.lock
 
-# Copied in from spec/tools.json by scripts/sync_spec.py at build time. The
-# original is the tracked one; a committed copy would be a second source of
-# truth that could disagree with it.
+# Copied in from spec/tools.json during the build by hatch_build.py, and by
+# the test suite's conftest. The original is the tracked one; a committed copy
+# would be a second source of truth that could disagree with it.
 python/src/ktemia_mcp/tools.json
 
 .DS_Store
