@@ -73,7 +73,8 @@ export function registerDetailTools(
         months: z
           .number()
           .int()
-          .positive()
+          .min(1)
+          .max(120)
           .optional()
           .describe(param(reviews.name, "months")),
         sources: z
@@ -85,6 +86,7 @@ export function registerDetailTools(
           .number()
           .int()
           .min(1)
+          .max(1000)
           .optional()
           .describe(param(reviews.name, "page")),
       }),

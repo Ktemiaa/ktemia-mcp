@@ -137,6 +137,7 @@ export function registerSearchTools(
           .number()
           .int()
           .min(0)
+          .max(3)
           .optional()
           .describe(param(flights.name, "maxStops")),
         airlines: z
@@ -245,16 +246,18 @@ export function registerSearchTools(
           .number()
           .int()
           .min(1)
+          .max(30)
           .optional()
           .describe(param(hotels.name, "adults")),
         rooms: z
           .number()
           .int()
           .min(1)
+          .max(8)
           .optional()
           .describe(param(hotels.name, "rooms")),
         childAges: z
-          .array(z.number().int().min(0))
+          .array(z.number().int().min(0).max(17))
           .optional()
           .describe(param(hotels.name, "childAges")),
         minStars: z
@@ -381,6 +384,8 @@ export function registerSearchTools(
         driverAge: z
           .number()
           .int()
+          .min(18)
+          .max(99)
           .optional()
           .describe(param(cars.name, "driverAge")),
         carClass: z

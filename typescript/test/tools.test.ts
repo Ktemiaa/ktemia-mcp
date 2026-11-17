@@ -127,6 +127,34 @@ describe("tool registration", () => {
     assert.equal(keyStatus?.inputSchema.additionalProperties, false);
   });
 
+  test("numeric bounds are plausible, not JavaScript's integer ceiling", async () => {
+    // z.number().int() emits maximum: 9007199254740991 unless a real bound is
+    // given. A model reading that sees nine quadrillion adults as a legal room
+    // occupancy, so the schema stops being useful guidance.
+    const SAFE_INT = 9007199254740991;
+    const { client } = await connect();
+    const { tools } = await client.listTools();
+
+    for (const tool of tools) {
+      const properties = (tool.inputSchema.properties ?? {}) as Record<
+        string,
+        { maximum?: number; minimum?: number }
+      >;
+      for (const [name, schema] of Object.entries(properties)) {
+        assert.notEqual(
+          schema.maximum,
+          SAFE_INT,
+          `${tool.name}.${name} has no real upper bound`,
+        );
+        assert.notEqual(
+          schema.minimum,
+          -SAFE_INT,
+          `${tool.name}.${name} has no real lower bound`,
+        );
+      }
+    }
+  });
+
   test("searches advertise the quota cost and the ask-first rule", async () => {
     const { client } = await connect();
     const { tools } = await client.listTools();
