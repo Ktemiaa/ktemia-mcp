@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# The offline suite is the gate. The live smoke test is deliberately not run
+# here: it spends real quota, depends on live provider data that moves hour to
+# hour, and would make a deploy gate flaky. Run it by hand before publishing
+# with `npm run test:live`.
+
+jobs:
+  typescript:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: typescript
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: typescript/package-lock.json
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      # The stdio entry point negotiates the protocol revision per connection,
+      # so a regression could serve one era and silently drop the other. Both
+      # are checked: the Inspector defaults to legacy, which would hide a
+      # modern-era break.
+      - name: Tools list over modern protocol
+        run: npm run inspect:modern
+
+      - name: Tools list over legacy protocol
+        run: npm run inspect:legacy
