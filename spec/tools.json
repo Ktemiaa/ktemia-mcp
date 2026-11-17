@@ -196,7 +196,7 @@
           "description": "Required amenities, for example 'wifi' or 'pool'."
         },
         "providers": {
-          "description": "Restrict to these booking providers, using ids from availableFilters on a results page rather than guessed names."
+          "description": "Restrict to these booking providers, using an id from availableFilters.bookingSites.options on a results page, for example 'Booking.com'. Guessed names match nothing."
         },
         "sortBy": {
           "description": "Result ordering.",
@@ -261,10 +261,10 @@
           "description": "Drop results above this price."
         },
         "providers": {
-          "description": "Restrict to these booking providers, using ids from availableFilters on a results page rather than guessed names."
+          "description": "Restrict to these booking providers, using an id from availableFilters.bookingSites on a results page, for example 'Booking.com'. Guessed names match nothing."
         },
         "agencies": {
-          "description": "Restrict to these rental agencies, using ids from availableFilters on a results page, for example 'Hertz'."
+          "description": "Restrict to these rental agencies, using an id from availableFilters.agency on a results page - the lowercase id such as 'hertz', not the display label such as 'Hertz'."
         },
         "sortBy": {
           "description": "Result ordering.",
