@@ -389,7 +389,7 @@ export function registerSearchTools(
           .optional()
           .describe(param(cars.name, "driverAge")),
         carClass: z
-          .array(z.enum(values("carClass")))
+          .enum(values("carClass"))
           .optional()
           .describe(param(cars.name, "carClass")),
         transmission: z

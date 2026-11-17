@@ -377,7 +377,7 @@ def create_server(
         pickupTime: Annotated[str | None, _param(cars["name"], "pickupTime")] = None,
         dropoffTime: Annotated[str | None, _param(cars["name"], "dropoffTime")] = None,
         driverAge: Annotated[int | None, _bounded(cars["name"], "driverAge", ge=18, le=99)] = None,
-        carClass: Annotated[list[CarClass] | None, _param(cars["name"], "carClass")] = None,
+        carClass: Annotated[CarClass | None, _param(cars["name"], "carClass")] = None,
         transmission: Annotated[Transmission | None, _param(cars["name"], "transmission")] = None,
         maxPrice: Annotated[float | None, _bounded(cars["name"], "maxPrice", gt=0)] = None,
         providers: Annotated[list[str] | None, _param(cars["name"], "providers")] = None,

@@ -66,6 +66,20 @@ jobs:
       - name: Test
         run: uv run --python ${{ matrix.python-version }} pytest
 
+      # The parity suite proves the two packages agree with each other, which
+      # is not the same as agreeing with the API: carClass shipped as a list
+      # in both languages for an enum the API takes singly, so the parameter
+      # was impossible to use and both packages were consistently wrong. This
+      # reads the published OpenAPI spec and compares shapes. It needs network
+      # but no key, and a spec fetch failure should not fail a PR, so it is
+      # advisory on one Python version only.
+      - name: Check tool schemas against the published OpenAPI spec
+        if: matrix.python-version == '3.13'
+        continue-on-error: true
+        env:
+          KTEMIA_CONTRACT_TEST: '1'
+        run: uv run --python 3.13 pytest tests/test_contract.py -v
+
       # The wheel is what users actually get. A missing tools.json here is a
       # server that cannot start, and it would not show up in the tests above,
       # which read the file from the source tree.

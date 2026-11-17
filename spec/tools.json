@@ -122,7 +122,7 @@
           "description": "Maximum stops per leg. 0 is non-stop only."
         },
         "airlines": {
-          "description": "Restrict to these two-letter IATA airline codes."
+          "description": "Restrict to these two-letter IATA airline codes, from ktemia_lookup with kind='airline' or availableFilters on a results page."
         },
         "alliances": {
           "description": "Restrict to these airline alliances.",
@@ -141,7 +141,7 @@
           "enum": "sortOrder"
         },
         "country": {
-          "description": "Two-letter market code to price in, for example 'US'."
+          "description": "Two-letter market code to price in, for example 'US'. It selects the market, and prices come back in that country's currency. There is no currency parameter."
         }
       }
     },
@@ -196,7 +196,7 @@
           "description": "Required amenities, for example 'wifi' or 'pool'."
         },
         "providers": {
-          "description": "Restrict to these booking providers."
+          "description": "Restrict to these booking providers, using ids from availableFilters on a results page rather than guessed names."
         },
         "sortBy": {
           "description": "Result ordering.",
@@ -208,7 +208,7 @@
           "enum": "sortOrder"
         },
         "country": {
-          "description": "Two-letter market code to price in."
+          "description": "Two-letter market code to price in, for example 'US'. It selects the market, and prices come back in that country's currency. There is no currency parameter."
         }
       }
     },
@@ -250,7 +250,7 @@
           "description": "Driver age. Under 25 often carries a young-driver surcharge."
         },
         "carClass": {
-          "description": "Restrict to these vehicle classes.",
+          "description": "Keep only this vehicle class. Omit to allow any class.",
           "enum": "carClass"
         },
         "transmission": {
@@ -261,10 +261,10 @@
           "description": "Drop results above this price."
         },
         "providers": {
-          "description": "Restrict to these booking providers."
+          "description": "Restrict to these booking providers, using ids from availableFilters on a results page rather than guessed names."
         },
         "agencies": {
-          "description": "Restrict to these rental agencies, for example 'Hertz'."
+          "description": "Restrict to these rental agencies, using ids from availableFilters on a results page, for example 'Hertz'."
         },
         "sortBy": {
           "description": "Result ordering.",
@@ -281,7 +281,7 @@
           "default": "total"
         },
         "country": {
-          "description": "Two-letter market code to price in."
+          "description": "Two-letter market code to price in, for example 'US'. It selects the market, and prices come back in that country's currency. There is no currency parameter."
         }
       }
     },
