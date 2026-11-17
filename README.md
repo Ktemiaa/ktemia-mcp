@@ -4,6 +4,8 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) server that searche
 
 Available for both Node (`npx -y @ktemia/mcp`) and Python (`uvx ktemia-mcp`).
 
+**[Get a free API key](https://app.ktemia.com/api-keys)** · [API reference](https://www.ktemia.com/docs/api/) · [Getting started](https://www.ktemia.com/docs/getting-started/) · [Pricing](https://www.ktemia.com/pricing/) · [Guide: flights in Cursor and Claude](https://www.ktemia.com/blog/flights-mcp/) · [Changelog](https://www.ktemia.com/docs/changelog/)
+
 Ktemia compares prices. It does not book the ticket, the car, or the room. The traveller books on the seller's site.
 
 | Tool | Use it for |
@@ -33,7 +35,7 @@ They are not two codebases that happen to agree. Both read one shared contract, 
 
 ## Install
 
-You need an API key from [app.ktemia.com](https://app.ktemia.com). Free, no card.
+You need an API key from [app.ktemia.com/api-keys](https://app.ktemia.com/api-keys). Free, no card.
 
 Each example below shows Node first, then Python. Use one, not both — two copies of the same server would just show every tool twice.
 

@@ -6,6 +6,8 @@ Ktemia compares prices. It does not book the ticket, the car, or the room. The t
 
 This is the Python package. A TypeScript package, [`@ktemia/mcp`](https://www.npmjs.com/package/@ktemia/mcp), exposes the same seven tools with the same descriptions and the same behaviour — both read one shared contract file, so pick whichever runtime you already have.
 
+**[Get a free API key](https://app.ktemia.com/api-keys)** · [API reference](https://www.ktemia.com/docs/api/) · [Getting started](https://www.ktemia.com/docs/getting-started/) · [Pricing](https://www.ktemia.com/pricing/) · [Guide: flights in Cursor and Claude](https://www.ktemia.com/blog/flights-mcp/) · [Changelog](https://www.ktemia.com/docs/changelog/)
+
 | Tool | Use it for |
 | ---- | ---------- |
 | `ktemia_key_status` | Plan, rate limits, and requests left this month. Costs no quota. |
@@ -20,7 +22,7 @@ Every plan can use the MCP server, including the [Free plan](https://www.ktemia.
 
 ## Install
 
-You need an API key from [app.ktemia.com](https://app.ktemia.com). Free, no card.
+You need an API key from [app.ktemia.com/api-keys](https://app.ktemia.com/api-keys). Free, no card.
 
 You also need [`uv`](https://docs.astral.sh/uv/), which ships `uvx`. `uvx` downloads the package into a throwaway environment and runs it, so there is nothing to install or keep updated:
 

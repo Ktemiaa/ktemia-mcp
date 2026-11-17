@@ -4,6 +4,10 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) server that searche
 
 Ktemia compares prices. It does not book the ticket, the car, or the room. The traveller books on the seller's site.
 
+**[Get a free API key](https://app.ktemia.com/api-keys)** · [API reference](https://www.ktemia.com/docs/api/) · [Getting started](https://www.ktemia.com/docs/getting-started/) · [Pricing](https://www.ktemia.com/pricing/) · [Guide: flights in Cursor and Claude](https://www.ktemia.com/blog/flights-mcp/) · [Changelog](https://www.ktemia.com/docs/changelog/)
+
+Prefer Python? [`ktemia-mcp`](https://pypi.org/project/ktemia-mcp/) on PyPI (`uvx ktemia-mcp`) exposes the same seven tools with the same descriptions and the same behaviour — both packages read one shared contract file, so pick whichever runtime you already have.
+
 | Tool | Use it for |
 | ---- | ---------- |
 | `ktemia_key_status` | Plan, rate limits, and requests left this month. Costs no quota. |
@@ -18,7 +22,7 @@ Every plan can use the MCP server, including the [Free plan](https://www.ktemia.
 
 ## Install
 
-You need an API key from [app.ktemia.com](https://app.ktemia.com). Free, no card.
+You need an API key from [app.ktemia.com/api-keys](https://app.ktemia.com/api-keys). Free, no card.
 
 ### Cursor
 
