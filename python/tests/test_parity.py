@@ -11,11 +11,14 @@ hardcoded, so this fails if either side drifts.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
+import tomllib
 
-from ktemia_mcp import spec
+from ktemia_mcp import __version__, spec
+from ktemia_mcp.client import VERSION as CLIENT_VERSION
 from ktemia_mcp.server import create_server
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -152,3 +155,41 @@ async def test_python_tool_names_match_spec_order() -> None:
     """Tool order is part of the contract: it is the order a model reads."""
     tools = await _python_tools()
     assert list(tools) == [t["name"] for t in _spec_tool_list()]
+
+
+# ── Version consistency ──────────────────────────────────────────────────────
+
+
+def _declared_versions() -> dict[str, str]:
+    """Every place a version is written down, across both packages.
+
+    The version is maintained by hand in five files. It also travels upstream
+    in the ``X-Ktemia-Client: mcp/<version>`` header, so a stale copy quietly
+    misattributes traffic in Ktemia's own logs - the kind of bug nobody
+    notices until the numbers are already wrong.
+    """
+    pyproject = tomllib.loads(
+        (REPO_ROOT / "python" / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    package_json = json.loads(
+        (TS_DIR / "package.json").read_text(encoding="utf-8")
+    )
+    ts_client = (TS_DIR / "src" / "client.ts").read_text(encoding="utf-8")
+    ts_match = re.search(r'VERSION\s*=\s*"([^"]+)"', ts_client)
+    assert ts_match, "could not find VERSION in typescript/src/client.ts"
+
+    return {
+        "python/pyproject.toml": pyproject["project"]["version"],
+        "ktemia_mcp.__version__": __version__,
+        "ktemia_mcp.client.VERSION": CLIENT_VERSION,
+        "typescript/package.json": package_json["version"],
+        "typescript/src/client.ts": ts_match.group(1),
+    }
+
+
+def test_all_declared_versions_agree() -> None:
+    declared = _declared_versions()
+    assert len(set(declared.values())) == 1, (
+        "version drift between packages: "
+        + ", ".join(f"{where}={value}" for where, value in declared.items())
+    )

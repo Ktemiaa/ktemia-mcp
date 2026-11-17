@@ -283,6 +283,10 @@ npm run inspect:legacy   # tools/list over the older initialize handshake
 
 Both servers negotiate the protocol era per connection. The Python SDK does this in its stdio loop; the TypeScript one needs `serveStdio`, and the hand-wired transport silently serves 2025-era clients only, which is why CI checks both eras explicitly.
 
+### Releasing
+
+See [PUBLISHING.md](PUBLISHING.md) for the npm and PyPI release process, including the account setup each registry needs and why a bad version cannot be replaced.
+
 ## Learn more
 
 **Docs**
