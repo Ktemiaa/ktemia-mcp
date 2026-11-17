@@ -15,7 +15,6 @@ import re
 from pathlib import Path
 
 import pytest
-import tomllib
 
 from ktemia_mcp import __version__, spec
 from ktemia_mcp.client import VERSION as CLIENT_VERSION
@@ -168,9 +167,16 @@ def _declared_versions() -> dict[str, str]:
     misattributes traffic in Ktemia's own logs - the kind of bug nobody
     notices until the numbers are already wrong.
     """
-    pyproject = tomllib.loads(
-        (REPO_ROOT / "python" / "pyproject.toml").read_text(encoding="utf-8")
-    )
+    # Read with a regex rather than tomllib: this package supports 3.10, where
+    # tomllib is not in the standard library, and a test that cannot even be
+    # imported on the lowest supported version defeats the point of the
+    # version matrix.
+    pyproject = (
+        REPO_ROOT / "python" / "pyproject.toml"
+    ).read_text(encoding="utf-8")
+    py_match = re.search(r'(?m)^version\s*=\s*"([^"]+)"', pyproject)
+    assert py_match, "could not find version in python/pyproject.toml"
+
     package_json = json.loads(
         (TS_DIR / "package.json").read_text(encoding="utf-8")
     )
@@ -179,7 +185,7 @@ def _declared_versions() -> dict[str, str]:
     assert ts_match, "could not find VERSION in typescript/src/client.ts"
 
     return {
-        "python/pyproject.toml": pyproject["project"]["version"],
+        "python/pyproject.toml": py_match.group(1),
         "ktemia_mcp.__version__": __version__,
         "ktemia_mcp.client.VERSION": CLIENT_VERSION,
         "typescript/package.json": package_json["version"],
