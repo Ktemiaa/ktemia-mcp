@@ -54,10 +54,45 @@ of the first release; if it has since been taken, publish under a different
 name and update the install commands in both READMEs rather than trying to
 reclaim it.
 
-Consider publishing the first release to [TestPyPI](https://test.pypi.org/)
-first (`--publish-url https://test.pypi.org/legacy/`), which is a separate
-registry with separate accounts. It is the only way to see exactly how the
-project page renders without burning a real version number.
+### TestPyPI (recommended for a first release)
+
+[TestPyPI](https://test.pypi.org/) is a **completely separate registry**. Your
+pypi.org account does not work there: it needs its own registration at
+[test.pypi.org/account/register](https://test.pypi.org/account/register/), its
+own 2FA, and its own API token. This catches people out, because the error for
+a pypi.org token used against TestPyPI is a flat `403 Invalid or
+non-existent authentication information`, which reads like a bad token rather
+than the wrong account.
+
+It is worth the extra account for a first release. A PyPI version number can
+never be reused, so TestPyPI is the only way to see the real rendered project
+page, confirm the install works end to end, and still ship `0.1.0` for real.
+
+```bash
+cd python
+rm -rf dist && uv build
+UV_PUBLISH_TOKEN=pypi-your-testpypi-token \
+  uv publish --publish-url https://test.pypi.org/legacy/
+```
+
+Then install from TestPyPI and check it runs. TestPyPI has no copy of our
+dependencies, so dependency resolution has to fall back to real PyPI:
+
+```bash
+cd "$(mktemp -d)"
+uv venv .v
+uv pip install --python .v/bin/python \
+  --index-url https://test.pypi.org/simple/ \
+  --extra-index-url https://pypi.org/simple/ \
+  ktemia-mcp
+KTEMIA_API_KEY=your-key .v/bin/ktemia-mcp   # should idle; Ctrl-C
+```
+
+Check the project page at `https://test.pypi.org/project/ktemia-mcp/`: the
+README should render with working links, and the sidebar should show the
+homepage, repository, and issues URLs from `pyproject.toml`.
+
+Only then publish to real PyPI, with the real token, as below.
 
 ## Pre-flight
 
