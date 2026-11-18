@@ -1,8 +1,9 @@
 # Publishing
 
 Both packages are released together by pushing a version tag. GitHub Actions
-(`.github/workflows/publish.yml`) then runs the tests and publishes
-`@ktemia/mcp` to npm and `ktemia-mcp` to PyPI. Nobody publishes from a laptop,
+(`.github/workflows/publish.yml`) then runs the tests, publishes
+`@ktemia/mcp` to npm and `ktemia-mcp` to PyPI, and then lists the release in
+the official MCP Registry as `io.github.Ktemiaa/ktemia-mcp`. Nobody publishes from a laptop,
 and there is no registry token in this repo, in GitHub secrets, or on anyone's
 machine.
 
@@ -37,7 +38,7 @@ invalid publisher.
 
 ## Release
 
-1. **Bump the version in five places.** The parity test fails if any of them
+1. **Bump the version in six places.** The parity test fails if any of them
    disagree:
 
    - `typescript/package.json`, then `npm install --package-lock-only` in
@@ -46,6 +47,8 @@ invalid publisher.
    - `python/pyproject.toml`
    - `python/src/ktemia_mcp/__init__.py` (`__version__`)
    - `python/src/ktemia_mcp/client.py` (`VERSION`)
+   - `server.json`: the top-level `version` and the `version` of both
+     entries in `packages`
 
    Both packages always carry the same version, even when only one changed.
 
@@ -75,13 +78,34 @@ invalid publisher.
    a tag pushed ahead of a workflow change publishes with the old workflow. Do
    not move a tag once it is pushed: cut the next version instead.
 
-5. **Watch the run:** `gh run watch` on the `Publish` run. Each job checks
+5. **Watch the run:** `gh run watch` on the `Publish` run. The `registry`
+   job starts only after `npm` and `pypi` both succeed. Each job checks
    that the tag matches its package version before uploading, and the PyPI job
    checks that the exact wheel it is about to upload serves all seven tools.
 
 npm and PyPI both take a few minutes to serve a new version after the run
 succeeds. npm in particular says "Your package is being processed" and keeps
 showing the previous `latest` for a while. That is normal.
+
+## MCP Registry
+
+The `registry` job publishes `server.json` to
+`registry.modelcontextprotocol.io` with `mcp-publisher login github-oidc`, so
+there is no token here either. The registry hosts metadata only and checks it
+against the packages: `mcpName` in `typescript/package.json` and the
+`mcp-name:` comment at the end of `python/README.md` must both equal `name` in
+`server.json`. The parity test checks that.
+
+Only GitHub Actions can publish under the `io.github.Ktemiaa/` namespace,
+because it belongs to an organization. `mcp-publisher login github` on a
+laptop is refused with a 403 even for an owner, since the device login cannot
+read organization roles. To publish by hand, use
+`mcp-publisher login github --token <classic PAT with read:org>` from an
+organization owner, then delete the token.
+
+Check the listing at
+`https://registry.modelcontextprotocol.io/v0/servers/io.github.Ktemiaa%2Fktemia-mcp/versions/latest`.
+If the job failed after both packages went out, re-run only that job.
 
 ## Verify like a user
 

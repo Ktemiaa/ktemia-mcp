@@ -166,7 +166,7 @@ async def test_python_tool_names_match_spec_order() -> None:
 def _declared_versions() -> dict[str, str]:
     """Every place a version is written down, across both packages.
 
-    The version is maintained by hand in five files. It also travels upstream
+    The version is maintained by hand in six files, server.json included. It also travels upstream
     in the ``X-Ktemia-Client: mcp/<version>`` header, so a stale copy quietly
     misattributes traffic in Ktemia's own logs - the kind of bug nobody
     notices until the numbers are already wrong.
@@ -188,12 +188,22 @@ def _declared_versions() -> dict[str, str]:
     ts_match = re.search(r'VERSION\s*=\s*"([^"]+)"', ts_client)
     assert ts_match, "could not find VERSION in typescript/src/client.ts"
 
+    server = json.loads(
+        (REPO_ROOT / "server.json").read_text(encoding="utf-8")
+    )
+    package_versions = {
+        f"server.json packages[{p['registryType']}]": p["version"]
+        for p in server["packages"]
+    }
+
     return {
         "python/pyproject.toml": py_match.group(1),
         "ktemia_mcp.__version__": __version__,
         "ktemia_mcp.client.VERSION": CLIENT_VERSION,
         "typescript/package.json": package_json["version"],
         "typescript/src/client.ts": ts_match.group(1),
+        "server.json": server["version"],
+        **package_versions,
     }
 
 
@@ -203,3 +213,23 @@ def test_all_declared_versions_agree() -> None:
         "version drift between packages: "
         + ", ".join(f"{where}={value}" for where, value in declared.items())
     )
+
+
+def test_registry_name_matches_both_packages() -> None:
+    """The MCP Registry rejects a publish unless each package names the server.
+
+    npm reads ``mcpName`` from package.json, PyPI reads an ``mcp-name:`` line in
+    the README that becomes the package description. A mismatch only shows up
+    after both packages are already published, so catch it here instead.
+    """
+    server = json.loads((REPO_ROOT / "server.json").read_text(encoding="utf-8"))
+    name = server["name"]
+    package_json = json.loads(
+        (TS_DIR / "package.json").read_text(encoding="utf-8")
+    )
+    readme = (REPO_ROOT / "python" / "README.md").read_text(encoding="utf-8")
+
+    assert package_json.get("mcpName") == name
+    assert re.search(rf"mcp-name: {re.escape(name)}(\s|-->|$)", readme)
+    identifiers = {p["registryType"]: p["identifier"] for p in server["packages"]}
+    assert identifiers == {"npm": package_json["name"], "pypi": "ktemia-mcp"}
