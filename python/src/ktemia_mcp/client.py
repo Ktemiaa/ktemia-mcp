@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-VERSION = "0.1.2"
+VERSION = "0.1.3"
 
 DEFAULT_BASE_URL = "https://api.ktemia.com"
 

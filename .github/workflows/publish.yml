@@ -63,3 +63,49 @@ jobs:
 
       - name: Publish
         run: npm publish --access public
+
+  # PyPI trusted publishing, the same idea as npm above: PyPI trusts this
+  # repo + workflow file + environment, so there is no PyPI token anywhere.
+  # The publisher is registered on pypi.org under the Ktemia organization;
+  # renaming this file or the environment breaks it until that is updated.
+  pypi:
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/ktemia-mcp/
+    permissions:
+      id-token: write # OIDC: how PyPI authenticates this workflow
+      contents: read
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Lint
+        run: uvx ruff check src tests scripts
+
+      - name: Test
+        run: uv run pytest
+
+      - name: Assert the tag matches the package version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml | head -1)"
+          if [ "$tag" != "$pkg" ]; then
+            echo "tag $GITHUB_REF_NAME does not match pyproject.toml $pkg" >&2
+            exit 1
+          fi
+
+      - name: Build
+        run: uv build
+
+      # The pypa action also uploads PEP 740 attestations, PyPI's equivalent
+      # of npm provenance. It is a container action, so the job's
+      # working-directory does not apply and the path is spelled out.
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: python/dist
