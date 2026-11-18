@@ -124,13 +124,10 @@ export function registerSearchTools(
         passengers: z
           .object({
             adults: z.number().int().min(0).max(9).optional(),
-            seniors: z.number().int().min(0).max(9).optional(),
-            students: z.number().int().min(0).max(9).optional(),
-            youths: z.number().int().min(0).max(9).optional(),
             children: z.number().int().min(0).max(9).optional(),
-            infantsInSeat: z.number().int().min(0).max(9).optional(),
             infantsOnLap: z.number().int().min(0).max(9).optional(),
           })
+          .strict()
           .optional()
           .describe(param(flights.name, "passengers")),
         maxStops: z

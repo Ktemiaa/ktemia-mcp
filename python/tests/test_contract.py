@@ -13,6 +13,7 @@ hermetic.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from typing import Any
@@ -42,6 +43,12 @@ MCP_ONLY = {"nextToken"}
 
 @pytest.fixture(scope="module")
 def spec() -> dict[str, Any]:
+    # KTEMIA_CONTRACT_SPEC points at a local openapi.json, to check a docs
+    # change against these tools before it is deployed.
+    local = os.environ.get("KTEMIA_CONTRACT_SPEC")
+    if local:
+        with open(local, encoding="utf-8") as handle:
+            return json.load(handle)
     response = httpx.get(SPEC_URL, timeout=30.0, follow_redirects=True)
     response.raise_for_status()
     return response.json()
@@ -60,6 +67,9 @@ def _resolve(spec: dict[str, Any], schema: dict[str, Any]) -> dict[str, Any]:
     ref = schema.get("$ref")
     if not ref:
         return schema
+    if ref.startswith("#/$defs/") and "$defs" in spec:
+        # Only when ``spec`` is a tool schema, which carries its own $defs.
+        return spec["$defs"][ref.split("/")[-1]]
     if not ref.startswith("#/components/schemas/"):
         return schema
     return spec["components"]["schemas"][ref.split("/")[-1]]
@@ -169,6 +179,21 @@ async def test_enum_values_match_the_api(
             )
 
     assert not wrong, f"{tool_name} enum drift against {path}: " + "; ".join(wrong)
+
+
+async def test_passenger_kinds_match_the_api(spec: dict[str, Any]) -> None:
+    """The nested passengers object, which the top-level checks never open.
+
+    Seniors, students, youths and seat infants stayed in both packages for a
+    while after they could no longer work, because nothing compared the
+    fields inside passengers with the API's.
+    """
+    api = _unwrap(spec, _body_properties(spec, SEARCHES["ktemia_search_flights"])["passengers"])
+    tools = await create_server(api_key="test-key").list_tools()
+    tool_schema = next(t.input_schema for t in tools if t.name == "ktemia_search_flights")
+    # The tool's passengers is a $ref into its own $defs, not the API's.
+    offered = _unwrap(tool_schema, tool_schema["properties"]["passengers"])
+    assert set(offered.get("properties", {})) == set(api.get("properties", {}))
 
 
 def _allowed_values(description: str) -> list[str]:

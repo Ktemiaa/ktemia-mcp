@@ -47,20 +47,17 @@ Country: TypeAlias = Annotated[str, Field(min_length=2, max_length=2)]
 
 
 class Passengers(BaseModel):
-    """Flight passenger counts, by fare type.
+    """Flight passenger counts: the three kinds kayak.com searches with.
 
-    ``extra="forbid"`` so a misspelled count surfaces as a validation error
-    rather than being silently dropped and searched for one adult.
+    ``extra="forbid"`` so a misspelled count - or a retired one such as
+    seniors - surfaces as a validation error rather than being silently
+    dropped and searched for one adult.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     adults: Annotated[int, Field(ge=0, le=9)] | None = None
-    seniors: Annotated[int, Field(ge=0, le=9)] | None = None
-    students: Annotated[int, Field(ge=0, le=9)] | None = None
-    youths: Annotated[int, Field(ge=0, le=9)] | None = None
     children: Annotated[int, Field(ge=0, le=9)] | None = None
-    infantsInSeat: Annotated[int, Field(ge=0, le=9)] | None = None
     infantsOnLap: Annotated[int, Field(ge=0, le=9)] | None = None
 
 

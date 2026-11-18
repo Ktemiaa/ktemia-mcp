@@ -118,7 +118,7 @@
           "default": "economy"
         },
         "passengers": {
-          "description": "Traveller counts by fare type: adults (18-64), seniors (65+), students, youths (12-17), children (2-11), infantsInSeat, infantsOnLap. Defaults to one adult. Maximum 9 per type."
+          "description": "Traveller counts: adults (12 and over), children (2-11), infantsOnLap (under 2, on an adult's lap). Defaults to one adult. Count seniors, students and youths as adults, and an infant in their own seat as a child. At most 9 in total, and no more lap infants than adults."
         },
         "maxStops": {
           "description": "Maximum stops per leg. 0 is non-stop only."
