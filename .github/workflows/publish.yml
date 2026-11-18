@@ -102,6 +102,14 @@ jobs:
       - name: Build
         run: uv build
 
+      # The packaged tools.json is a separate build step; without it the
+      # server starts with no tools. Prove the exact artifact about to be
+      # uploaded serves all seven before PyPI makes it permanent.
+      - name: Verify the wheel runs standalone
+        run: |
+          uv run --isolated --no-project --with dist/*.whl \
+            python scripts/smoke_wheel.py
+
       # The pypa action also uploads PEP 740 attestations, PyPI's equivalent
       # of npm provenance. It is a container action, so the job's
       # working-directory does not apply and the path is spelled out.

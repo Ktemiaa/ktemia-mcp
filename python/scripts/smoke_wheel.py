@@ -17,6 +17,7 @@ import json
 import os
 import subprocess
 import sys
+import threading
 
 EXPECTED = 7
 
@@ -39,33 +40,61 @@ REQUESTS = [
 def main(argv: list[str]) -> int:
     command = argv[1] if len(argv) > 1 else "ktemia-mcp"
 
-    result = subprocess.run(  # noqa: S603
+    # Keep stdin open until the answer arrives, the way a real MCP client does.
+    # Writing every request and closing stdin at once races the server: on
+    # end-of-input it may shut down before answering tools/list, which showed
+    # up in CI as "got 0 tools" on a cold runner while the wheel was fine.
+    proc = subprocess.Popen(  # noqa: S603
         [command],
-        input="\n".join(json.dumps(r) for r in REQUESTS) + "\n",
-        capture_output=True,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
-        timeout=60,
+        bufsize=1,
         # A placeholder key is enough: tools/list must not touch the network,
         # and requiring a real key here would make CI depend on a secret.
         env={**os.environ, "KTEMIA_API_KEY": "smoke-placeholder"},
-        check=False,
     )
+    timer = threading.Timer(60, proc.kill)
+    timer.start()
 
     names: list[str] = []
-    for line in result.stdout.splitlines():
-        if not line.strip():
-            continue
-        message = json.loads(line)
-        if message.get("id") == 2:
-            if "error" in message:
-                print(f"tools/list failed: {message['error']}", file=sys.stderr)
-                return 1
-            names = [tool["name"] for tool in message["result"]["tools"]]
+    error: object = None
+    try:
+        assert proc.stdin is not None and proc.stdout is not None
+        for request in REQUESTS:
+            proc.stdin.write(json.dumps(request) + "\n")
+        proc.stdin.flush()
+
+        for line in proc.stdout:
+            if not line.strip():
+                continue
+            message = json.loads(line)
+            if message.get("id") == 2:
+                if "error" in message:
+                    error = message["error"]
+                else:
+                    names = [tool["name"] for tool in message["result"]["tools"]]
+                break
+    finally:
+        timer.cancel()
+        if proc.stdin is not None:
+            proc.stdin.close()
+        try:
+            proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+    stderr = proc.stderr.read() if proc.stderr is not None else ""
+
+    if error is not None:
+        print(f"tools/list failed: {error}", file=sys.stderr)
+        return 1
 
     if len(names) != EXPECTED:
         print(
             f"expected {EXPECTED} tools, got {len(names)}: {names}\n"
-            f"--- stderr ---\n{result.stderr}",
+            f"--- stderr ---\n{stderr}",
             file=sys.stderr,
         )
         return 1
