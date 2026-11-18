@@ -1,196 +1,100 @@
 # Publishing
 
-Both packages are published by hand, from a clean checkout, after the same
-checks CI runs. Read this end to end before the first release: a version number
-cannot be reused on either registry, so a mistake is corrected by publishing
-another version, never by replacing one.
+Both packages are released together by pushing a version tag. GitHub Actions
+(`.github/workflows/publish.yml`) then runs the tests and publishes
+`@ktemia/mcp` to npm and `ktemia-mcp` to PyPI. Nobody publishes from a laptop,
+and there is no registry token in this repo, in GitHub secrets, or on anyone's
+machine.
 
-## One-time setup
+A version number cannot be reused on either registry. A mistake is corrected by
+publishing another version, never by replacing one.
 
-### npm (`@ktemia/mcp`)
+## How authentication works
 
-`@ktemia` is a **scope**, and a scope has to exist before anything can be
-published into it. It does not exist yet.
+Both registries use **trusted publishing** over OpenID Connect. Each registry
+is told once which repository, workflow file, and (for PyPI) environment may
+publish. At release time GitHub issues the workflow a short-lived identity
+token, and the registry checks it against that record. `id-token: write` in
+the workflow is what allows this, so removing it breaks every release.
 
-1. Sign in at [npmjs.com](https://www.npmjs.com/) as the account that should
-   own the package. Use an organisation account, not a personal one: a personal
-   account cannot be handed over later without transferring the whole login.
-2. Create the organisation named `ktemia`
-   ([npmjs.com/org/create](https://www.npmjs.com/org/create)). The free plan
-   covers public packages. This is what makes the `@ktemia/*` scope yours.
-3. Turn on 2FA for the account. npm requires it for publishing, and without it
-   the publish step fails after the package has already been built.
-4. Authorise this machine:
+Both registries also attach a provenance attestation that ties each published
+file to the commit and workflow run that built it:
 
-   ```bash
-   npm login
-   npm whoami          # should print the account name
-   npm org ls ktemia   # should list you as owner
-   ```
+- npm: `https://registry.npmjs.org/-/npm/v1/attestations/@ktemia%2fmcp@<version>`
+- PyPI: shown on the project page under each file's details
 
-A scoped package is **private by default**, which is why the publish command
-below passes `--access public` explicitly. Forgetting it on a free plan fails
-with a payment-required error.
+The records live on the registries:
 
-### PyPI (`ktemia-mcp`)
+| Registry | Where the trusted publisher is configured | Values |
+| -------- | ----------------------------------------- | ------ |
+| npm | `@ktemia/mcp` → Settings → Trusted publishing | repo `Ktemiaa/ktemia-mcp`, workflow `publish.yml` |
+| PyPI | organization `ktemia` → Publishing (or the project's Publishing page) | repo `Ktemiaa/ktemia-mcp`, workflow `publish.yml`, environment `pypi` |
 
-1. Create an account at [pypi.org](https://pypi.org/account/register/) and
-   verify the email address.
-2. Enable 2FA. PyPI requires it to create API tokens.
-3. Create an API token at
-   [pypi.org/manage/account/token](https://pypi.org/manage/account/token/).
-   Scope it to "Entire account" for the first upload - a project-scoped token
-   cannot be created for a project that does not exist yet. After the first
-   release, create a token scoped to `ktemia-mcp` and delete the broad one.
-4. Keep the token out of your shell history. Put it in a gitignored file and
-   read it at publish time:
-
-   ```bash
-   echo 'UV_PUBLISH_TOKEN=pypi-...' >> python/.env.local
-   ```
-
-PyPI names are first-come and cannot be renamed. `ktemia-mcp` was unclaimed as
-of the first release; if it has since been taken, publish under a different
-name and update the install commands in both READMEs rather than trying to
-reclaim it.
-
-### TestPyPI (recommended for a first release)
-
-[TestPyPI](https://test.pypi.org/) is a **completely separate registry**. Your
-pypi.org account does not work there: it needs its own registration at
-[test.pypi.org/account/register](https://test.pypi.org/account/register/), its
-own 2FA, and its own API token. This catches people out, because the error for
-a pypi.org token used against TestPyPI is a flat `403 Invalid or
-non-existent authentication information`, which reads like a bad token rather
-than the wrong account.
-
-It is worth the extra account for a first release. A PyPI version number can
-never be reused, so TestPyPI is the only way to see the real rendered project
-page, confirm the install works end to end, and still ship `0.1.0` for real.
-
-```bash
-cd python
-rm -rf dist && uv build
-UV_PUBLISH_TOKEN=pypi-your-testpypi-token \
-  uv publish --publish-url https://test.pypi.org/legacy/
-```
-
-Then install from TestPyPI and check it runs. TestPyPI has no copy of our
-dependencies, so dependency resolution has to fall back to real PyPI:
-
-```bash
-cd "$(mktemp -d)"
-uv venv .v
-uv pip install --python .v/bin/python \
-  --index-url https://test.pypi.org/simple/ \
-  --extra-index-url https://pypi.org/simple/ \
-  ktemia-mcp
-KTEMIA_API_KEY=your-key .v/bin/ktemia-mcp   # should idle; Ctrl-C
-```
-
-Check the project page at `https://test.pypi.org/project/ktemia-mcp/`: the
-README should render with working links, and the sidebar should show the
-homepage, repository, and issues URLs from `pyproject.toml`.
-
-Only then publish to real PyPI, with the real token, as below.
-
-## Pre-flight
-
-Run everything here from a **clean checkout**, so nothing local leaks into a
-published artifact:
-
-```bash
-git status --porcelain     # must be empty
-git log --oneline -1       # the commit you intend to ship
-```
-
-```bash
-# TypeScript
-cd typescript
-npm ci
-npm run typecheck
-npm test
-npm run build
-
-# Python
-cd ../python
-uv sync
-uv run pytest
-uv build
-uvx twine check dist/*
-```
-
-Then confirm the artifacts are what you think they are:
-
-```bash
-cd ../typescript && npm pack --dry-run
-cd ../python && tar tzf dist/*.tar.gz
-```
-
-Check each one:
-
-- `README.md` and `LICENSE` are present. npm does not follow symlinks, so a
-  symlinked README silently publishes without one.
-- `dist/tools.json` (npm) and `src/ktemia_mcp/tools.json` (sdist) are present.
-  Without the shared spec the server cannot start.
-- No `.env`, `.env.local`, or anything matching `sk_live_`.
-
-`python/tests/test_parity.py` asserts the version matches across all five
-places it is written down, including the `X-Ktemia-Client` header, so run it
-before bumping anything.
+Renaming `publish.yml`, renaming the `pypi` environment, or moving the repo
+breaks publishing until the matching record is updated. Every field is
+compared exactly, so a typo such as `pypl` for `pypi` is rejected as an
+invalid publisher.
 
 ## Release
 
-Bump the version in **five** files, which the parity test will verify:
+1. **Bump the version in five places.** The parity test fails if any of them
+   disagree:
 
-- `typescript/package.json`
-- `typescript/src/client.ts` (`VERSION`)
-- `python/pyproject.toml`
-- `python/src/ktemia_mcp/__init__.py` (`__version__`)
-- `python/src/ktemia_mcp/client.py` (`VERSION`)
+   - `typescript/package.json`, then `npm install --package-lock-only` in
+     `typescript/` so `package-lock.json` follows
+   - `typescript/src/client.ts` (`VERSION`)
+   - `python/pyproject.toml`
+   - `python/src/ktemia_mcp/__init__.py` (`__version__`)
+   - `python/src/ktemia_mcp/client.py` (`VERSION`)
 
-```bash
-cd python && uv run pytest tests/test_parity.py   # catches a missed file
-git commit -am "Release 0.1.0"
-git tag v0.1.0
-```
+   Both packages always carry the same version, even when only one changed.
 
-Publish npm first, because it is the one that can fail on account setup:
+2. **Run the checks locally:**
 
-```bash
-cd typescript
-npm publish --access public --dry-run   # last look
-npm publish --access public
-```
+   ```bash
+   cd typescript && npm ci && npm run typecheck && npm test && npm run build
+   cd ../python && uv run pytest && uvx ruff check src tests scripts
+   rm -rf dist && uv build && uvx twine check dist/*
+   uv run --isolated --no-project --with dist/*.whl python scripts/smoke_wheel.py
+   ```
 
-Then PyPI. `UV_PUBLISH_TOKEN` is read from the environment, so the token never
-has to appear in the command:
+   To also check the tool schemas against the live API spec:
+   `KTEMIA_CONTRACT_TEST=1 uv run pytest tests/test_contract.py`.
 
-```bash
-cd ../python
-rm -rf dist && uv build
-set -a; source .env.local; set +a
-uv publish --dry-run     # last look
-uv publish
-```
+3. **Commit and push to `main`, then wait for CI to pass.**
 
-```bash
-git push && git push --tags
-```
+4. **Tag the commit CI passed on:**
+
+   ```bash
+   git tag -a v0.1.4 -m "0.1.4: <one line on what changed>"
+   test "$(git rev-parse v0.1.4^{commit})" = "$(git rev-parse origin/main)"
+   git push origin v0.1.4
+   ```
+
+   Push the commit before the tag. The workflow runs from the tagged commit, so
+   a tag pushed ahead of a workflow change publishes with the old workflow. Do
+   not move a tag once it is pushed: cut the next version instead.
+
+5. **Watch the run:** `gh run watch` on the `Publish` run. Each job checks
+   that the tag matches its package version before uploading, and the PyPI job
+   checks that the exact wheel it is about to upload serves all seven tools.
+
+npm and PyPI both take a few minutes to serve a new version after the run
+succeeds. npm in particular says "Your package is being processed" and keeps
+showing the previous `latest` for a while. That is normal.
 
 ## Verify like a user
 
-Do not trust the registry pages. Run the commands from the READMEs, in a
-throwaway directory, with no local checkout on the path:
+Do not trust the registry pages. Run the published packages the way a client
+would, in a throwaway directory:
 
 ```bash
 cd "$(mktemp -d)"
-KTEMIA_API_KEY=your-key npx -y @ktemia/mcp     # Ctrl-C once it idles
-KTEMIA_API_KEY=your-key uvx ktemia-mcp
+KTEMIA_API_KEY=your-key npx -y @ktemia/mcp@0.1.4   # should idle; Ctrl-C
+KTEMIA_API_KEY=your-key uvx ktemia-mcp@0.1.4
 ```
 
-Both should sit silently waiting for JSON-RPC. Then check a real host sees the
-tools:
+Then check that a real host sees the tools:
 
 ```bash
 claude mcp add ktemia-check -e KTEMIA_API_KEY=your-key -- uvx ktemia-mcp
@@ -198,20 +102,21 @@ claude mcp list        # expect: ✔ Connected
 claude mcp remove ktemia-check
 ```
 
-A registry can take a minute to serve a new version, and `npx`/`uvx` cache
-aggressively. If you get the old version, `npx --yes @ktemia/mcp@0.1.0` and
-`uvx ktemia-mcp@0.1.0` pin it explicitly.
+`npx` and `uvx` cache aggressively, so pin the version as above when checking
+a release that just went out.
 
 ## If something is wrong
 
 Neither registry lets you replace a version. Publish a patch instead.
 
-- **npm**: `npm unpublish @ktemia/mcp@0.1.0` works only within 72 hours and
-  only if nothing depends on it. Prefer
-  `npm deprecate @ktemia/mcp@0.1.0 "use 0.1.1"`, which leaves installs working.
-- **PyPI**: there is no unpublish. You can only "yank" a release
+- **npm**: `npm unpublish` works only within 72 hours and only if nothing
+  depends on the version. Prefer
+  `npm deprecate @ktemia/mcp@<bad> "use <good>"`, which warns on install and
+  leaves pinned installs working.
+- **PyPI**: there is no unpublish. You can only yank a release
   (`pypi.org/manage/project/ktemia-mcp/releases/`), which hides it from new
   installs while keeping it resolvable for anything that pinned it.
 
-Because a bad release is this hard to undo, the pre-flight above is not
-optional.
+If a publish job fails after the other one succeeded, fix the cause and
+re-run only the failed job from the Actions page. Re-running uses the same
+tagged commit, so both registries end up with the same code.
