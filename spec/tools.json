@@ -278,7 +278,7 @@
           "enum": "sortOrder"
         },
         "priceMode": {
-          "description": "Whether prices are the rental total or a daily rate.",
+          "description": "What each price shows: the rental total, or the average daily rate. Every option also carries perDay either way. maxPrice always caps the total.",
           "enum": "priceMode",
           "default": "total"
         },
