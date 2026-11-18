@@ -1,0 +1,48 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Ktemiaa/ktemia-mcp",
+  "title": "Ktemia",
+  "description": "Search and compare flights, hotels and rental cars, with each seller's price and booking link.",
+  "websiteUrl": "https://www.ktemia.com/docs/mcp/",
+  "repository": {
+    "url": "https://github.com/Ktemiaa/ktemia-mcp",
+    "source": "github"
+  },
+  "version": "0.1.4",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@ktemia/mcp",
+      "version": "0.1.4",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "KTEMIA_API_KEY",
+          "description": "Your Ktemia API key. Get a free one at https://app.ktemia.com/api-keys",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        }
+      ]
+    },
+    {
+      "registryType": "pypi",
+      "identifier": "ktemia-mcp",
+      "version": "0.1.4",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "KTEMIA_API_KEY",
+          "description": "Your Ktemia API key. Get a free one at https://app.ktemia.com/api-keys",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

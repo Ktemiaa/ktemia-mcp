@@ -3,5 +3,5 @@
 from .client import KtemiaClient, KtemiaError
 from .server import create_server
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 __all__ = ["KtemiaClient", "KtemiaError", "create_server", "__version__"]

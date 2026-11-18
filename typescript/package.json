@@ -1,6 +1,7 @@
 {
   "name": "@ktemia/mcp",
-  "version": "0.1.3",
+  "version": "0.1.4",
+  "mcpName": "io.github.Ktemiaa/ktemia-mcp",
   "description": "Model Context Protocol server for the Ktemia travel search API - flights, hotels, and cars across 100+ providers",
   "license": "MIT",
   "author": "Ktemia",

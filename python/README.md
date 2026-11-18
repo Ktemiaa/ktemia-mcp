@@ -220,3 +220,5 @@ Then point your client at `uv --directory /path/to/ktemia-mcp/python run ktemia-
 ## License
 
 MIT
+
+<!-- mcp-name: io.github.Ktemiaa/ktemia-mcp -->
