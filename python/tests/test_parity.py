@@ -103,7 +103,6 @@ async def test_numeric_parameters_have_sane_bounds() -> None:
         ("ktemia_search_hotels", "adults"): 30,
         ("ktemia_search_hotels", "rooms"): 8,
         ("ktemia_search_cars", "driverAge"): 99,
-        ("ktemia_get_hotel_reviews", "months"): 120,
         ("ktemia_get_hotel_reviews", "page"): 1000,
     }
     for (tool_name, param_name), expected_max in bounded.items():
@@ -112,6 +111,11 @@ async def test_numeric_parameters_have_sane_bounds() -> None:
         branches = schema.get("anyOf", [schema])
         found = [b.get("maximum") for b in branches if b.get("maximum") is not None]
         assert found == [expected_max], f"{tool_name}.{param_name}: {schema}"
+
+    # months is a list of calendar months, so the bound sits on each item.
+    months = (tools["ktemia_get_hotel_reviews"].input_schema or {})["properties"]["months"]
+    array = next(b for b in months.get("anyOf", [months]) if b.get("type") == "array")
+    assert array["items"].get("minimum") == 1 and array["items"].get("maximum") == 12, months
 
 
 async def test_all_tools_are_annotated_read_only() -> None:

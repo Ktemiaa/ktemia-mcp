@@ -276,7 +276,9 @@ describe("credentials and transport", () => {
 });
 
 describe("query serialisation", () => {
-  test("array values repeat the key and undefined is dropped", async () => {
+  test("array values become one comma-separated value and undefined is dropped", async () => {
+    // The API keeps only the last of a repeated key, so repeating would
+    // silently narrow a multi-value filter to its final value.
     let url = "";
     globalThis.fetch = (async (target: URL) => {
       url = target.toString();
@@ -286,15 +288,16 @@ describe("query serialisation", () => {
       });
     }) as unknown as typeof fetch;
 
-    await client().get("/hotels/results", {
-      token: "t1",
-      amenities: ["wifi", "pool"],
+    await client().get("/hotels/reviews", {
+      hotelId: "1",
+      sources: ["booking", "agoda"],
+      months: [10, 11],
       missing: undefined,
     });
 
-    assert.match(url, /token=t1/);
-    assert.match(url, /amenities=wifi/);
-    assert.match(url, /amenities=pool/);
+    const params = new URL(url).searchParams;
+    assert.deepEqual(params.getAll("sources"), ["booking,agoda"]);
+    assert.deepEqual(params.getAll("months"), ["10,11"]);
     assert.doesNotMatch(url, /missing/);
   });
 });

@@ -102,13 +102,19 @@ def _parse_error_envelope(body: Any) -> dict[str, str] | None:
 
 
 def _flatten_query(query: dict[str, Any]) -> list[tuple[str, str]]:
-    """Drop empty values and repeat the key for list values."""
+    """Drop empty values and send each list as one comma-separated value.
+
+    The API reads a list as ``key=a,b``. Repeating the key instead is silently
+    wrong: the API keeps only the last value, so ``sources=booking&sources=agoda``
+    reads Agoda alone.
+    """
     pairs: list[tuple[str, str]] = []
     for key, value in query.items():
         if value is None:
             continue
         if isinstance(value, (list, tuple)):
-            pairs.extend((key, str(item)) for item in value)
+            if value:
+                pairs.append((key, ",".join(str(item) for item in value)))
         elif isinstance(value, bool):
             # Python's str(True) is "True"; the API expects JSON's "true".
             pairs.append((key, "true" if value else "false"))

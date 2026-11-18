@@ -14,6 +14,7 @@ hermetic.
 from __future__ import annotations
 
 import os
+import re
 from typing import Any
 
 import httpx
@@ -168,3 +169,34 @@ async def test_enum_values_match_the_api(
             )
 
     assert not wrong, f"{tool_name} enum drift against {path}: " + "; ".join(wrong)
+
+
+def _allowed_values(description: str) -> list[str]:
+    """Values from an "Allowed values:" list of "- `value`: ..." lines."""
+    return re.findall(r"^- `([^`]+)`", description, flags=re.MULTILINE)
+
+
+async def test_review_filters_match_the_api(spec: dict[str, Any]) -> None:
+    """GET parameters are documented as comma-separated strings, not schemas.
+
+    The search checks above read request bodies, so they could not see this
+    endpoint, which is how travelerTypes shipped with the example 'family'
+    when the API only accepts 'families'. The allowed values here live in the
+    parameter description, so read them from there.
+    """
+    operation = spec["paths"]["/hotels/reviews"]["get"]
+    api = {p["name"]: p for p in operation["parameters"]}
+    offered = (await _tool_schemas())["ktemia_get_hotel_reviews"]
+
+    assert set(api) == set(offered), (
+        f"tool offers {sorted(set(offered) - set(api))}, "
+        f"API has {sorted(set(api) - set(offered))}"
+    )
+
+    wrong: list[str] = []
+    for name in ("travelerTypes", "sources"):
+        allowed = _allowed_values(api[name].get("description", ""))
+        items = _unwrap(spec, offered[name]).get("items", {})
+        if sorted(allowed) != sorted(items.get("enum") or []):
+            wrong.append(f"{name}: api={sorted(allowed)} tool={items.get('enum')}")
+    assert not wrong, "; ".join(wrong)

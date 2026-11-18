@@ -133,7 +133,10 @@ export class KtemiaClient {
     for (const [key, value] of Object.entries(opts.query ?? {})) {
       if (value === undefined || value === null) continue;
       if (Array.isArray(value)) {
-        for (const item of value) url.searchParams.append(key, String(item));
+        // The API reads a list as one comma-separated value. Repeating the
+        // key instead is silently wrong: it keeps only the last value, so
+        // sources=booking&sources=agoda reads Agoda alone.
+        if (value.length) url.searchParams.set(key, value.map(String).join(","));
       } else {
         url.searchParams.set(key, String(value));
       }

@@ -107,7 +107,12 @@ async def test_key_is_not_leaked_into_the_query_string(mock_transport):
 # ── Query building ───────────────────────────────────────────────────────────
 
 
-async def test_drops_unset_params_and_repeats_lists(mock_transport):
+async def test_drops_unset_params_and_joins_lists(mock_transport):
+    """A list goes out as one comma-separated value, never a repeated key.
+
+    The API keeps only the last of a repeated key, so repeating would silently
+    narrow a multi-value filter to its final value.
+    """
     seen = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -116,10 +121,14 @@ async def test_drops_unset_params_and_repeats_lists(mock_transport):
 
     mock_transport(handler)
     await KtemiaClient(api_key="k").get(
-        "/hotels/locations",
-        {"query": "london", "country": None, "providers": ["a", "b"]},
+        "/hotels/reviews",
+        {"hotelId": "1", "search": None, "sources": ["booking", "agoda"], "months": [10, 11]},
     )
-    assert seen["params"] == [("query", "london"), ("providers", "a"), ("providers", "b")]
+    assert seen["params"] == [
+        ("hotelId", "1"),
+        ("sources", "booking,agoda"),
+        ("months", "10,11"),
+    ]
 
 
 async def test_booleans_are_sent_as_json_literals(mock_transport):

@@ -27,6 +27,8 @@
     "priceMode": ["total", "perDay"],
     "locationType": ["city", "airport", "all"],
     "reviewSort": ["recent", "oldest", "highestScore", "lowestScore"],
+    "travelerType": ["families", "couples", "solo", "friends", "business"],
+    "reviewSource": ["booking", "agoda", "priceline"],
     "lookupKind": ["airport", "airline", "hotelLocation", "carLocation"],
     "vertical": ["flights", "hotels", "cars"]
   },
@@ -332,13 +334,15 @@
           "default": "recent"
         },
         "travelerTypes": {
-          "description": "Restrict to reviewer types, for example 'family' or 'business'."
+          "description": "Keep only reviews from these kinds of traveller. Send one or more.",
+          "enum": "travelerType"
         },
         "months": {
-          "description": "Only reviews from the last N months."
+          "description": "Keep only stays in these calendar months, 1 for January through 12 for December - for example [6, 7, 8] for summer stays. This is the month of the stay in any year, not a recent window; for the newest reviews, use sortBy='recent' instead."
         },
         "sources": {
-          "description": "Restrict to these review sources."
+          "description": "Read reviews from only these sites. Omit to read all three.",
+          "enum": "reviewSource"
         },
         "search": {
           "description": "Only reviews containing this phrase, for example 'air conditioning'."

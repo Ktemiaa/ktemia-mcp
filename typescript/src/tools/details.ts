@@ -67,18 +67,19 @@ export function registerDetailTools(
           .optional()
           .describe(param(reviews.name, "sortBy")),
         travelerTypes: z
-          .array(z.string())
+          .array(z.enum(values("travelerType")))
+          .min(1)
           .optional()
           .describe(param(reviews.name, "travelerTypes")),
         months: z
-          .number()
-          .int()
+          .array(z.number().int().min(1).max(12))
           .min(1)
-          .max(120)
+          .max(12)
           .optional()
           .describe(param(reviews.name, "months")),
         sources: z
-          .array(z.string())
+          .array(z.enum(values("reviewSource")))
+          .min(1)
           .optional()
           .describe(param(reviews.name, "sources")),
         search: z.string().optional().describe(param(reviews.name, "search")),

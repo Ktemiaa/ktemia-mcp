@@ -41,8 +41,11 @@ from .types import (
     Passengers,
     PriceMode,
     ReviewSort,
+    ReviewSource,
     SortOrder,
+    StayMonth,
     Transmission,
+    TravelerType,
     Vertical,
 )
 
@@ -474,9 +477,18 @@ def create_server(
     async def ktemia_get_hotel_reviews(
         hotelId: Annotated[IdLike, _required(reviews["name"], "hotelId")],
         sortBy: Annotated[ReviewSort | None, _param(reviews["name"], "sortBy")] = None,
-        travelerTypes: Annotated[list[str] | None, _param(reviews["name"], "travelerTypes")] = None,
-        months: Annotated[int | None, _bounded(reviews["name"], "months", ge=1, le=120)] = None,
-        sources: Annotated[list[str] | None, _param(reviews["name"], "sources")] = None,
+        travelerTypes: Annotated[
+            list[TravelerType] | None,
+            _bounded(reviews["name"], "travelerTypes", min_length=1),
+        ] = None,
+        months: Annotated[
+            list[StayMonth] | None,
+            _bounded(reviews["name"], "months", min_length=1, max_length=12),
+        ] = None,
+        sources: Annotated[
+            list[ReviewSource] | None,
+            _bounded(reviews["name"], "sources", min_length=1),
+        ] = None,
         search: Annotated[str | None, _param(reviews["name"], "search")] = None,
         page: Annotated[int | None, _bounded(reviews["name"], "page", ge=1, le=1000)] = None,
     ) -> CallToolResult:

@@ -34,6 +34,10 @@ LookupKind: TypeAlias = _literal("lookupKind")
 LocationType: TypeAlias = _literal("locationType")
 Vertical: TypeAlias = _literal("vertical")
 ReviewSort: TypeAlias = _literal("reviewSort")
+TravelerType: TypeAlias = _literal("travelerType")
+ReviewSource: TypeAlias = _literal("reviewSource")
+#: A calendar month of the stay, 1 = January, matching the TypeScript schema.
+StayMonth: TypeAlias = Annotated[int, Field(ge=1, le=12)]
 
 #: An identifier that may arrive unquoted. See ``result.id_string``.
 IdLike: TypeAlias = str | int | float
