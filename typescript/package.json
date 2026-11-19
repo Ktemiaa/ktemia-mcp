@@ -39,7 +39,7 @@
     "build": "tsc && node scripts/sync-spec.mjs",
     "prepublishOnly": "npm run build",
     "typecheck": "tsc --noEmit",
-    "test": "npm run build && node --test --experimental-strip-types test/client.test.ts test/tools.test.ts test/http.test.ts",
+    "test": "npm run build && node --test --experimental-strip-types test/client.test.ts test/tools.test.ts test/http.test.ts test/oauth.test.ts",
     "start:http": "node dist/http-main.js",
     "test:live": "npm run build && node --env-file-if-exists=.env.local --test --experimental-strip-types test/live.test.ts",
     "inspect:modern": "npx @modelcontextprotocol/inspector --cli node dist/index.js --protocol-era modern --method tools/list",

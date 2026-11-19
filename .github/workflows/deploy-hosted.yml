@@ -28,6 +28,9 @@ env:
   REPOSITORY: ktemia
   RUNTIME_SA: ktemia-mcp-runtime@project-8a62bc21-d379-4efc-9f7.iam.gserviceaccount.com
   PUBLIC_URL: https://mcp.ktemia.com
+  # Ktemia's backend, which owns accounts and consent. This origin relays
+  # /authorize, /token, /register and /revoke to it.
+  OAUTH_UPSTREAM: https://ks5an5dy8f.execute-api.eu-north-1.amazonaws.com/default/api/v1/oauth
 
 permissions:
   contents: read
@@ -104,7 +107,7 @@ jobs:
             --min-instances=0 \
             --max-instances=10 \
             --set-secrets=KTEMIA_RELAY_SECRET=KTEMIA_RELAY_SECRET:latest \
-            --set-env-vars="MCP_ALLOWED_HOSTS=mcp.ktemia.com,MCP_TRUSTED_PROXY_HOPS=1" \
+            --set-env-vars="MCP_ALLOWED_HOSTS=mcp.ktemia.com,MCP_TRUSTED_PROXY_HOPS=1,KTEMIA_OAUTH_ISSUER=${PUBLIC_URL},KTEMIA_OAUTH_UPSTREAM=${OAUTH_UPSTREAM}" \
             --quiet
 
       - name: Verify the new revision serves traffic
@@ -121,6 +124,11 @@ jobs:
                 -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}')"
               if [ "${unauth}" != "401" ]; then
                 echo "Unauthenticated /mcp returned ${unauth}, expected 401" >&2
+                break
+              fi
+              # OAuth discovery must resolve end to end, through the relay.
+              if ! curl -sf "${PUBLIC_URL}/.well-known/oauth-authorization-server" | grep -q '"issuer"'; then
+                echo "OAuth authorization server metadata did not resolve" >&2
                 break
               fi
               echo "### Deployed ${PUBLIC_URL}" >> "$GITHUB_STEP_SUMMARY"

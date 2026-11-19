@@ -11,6 +11,9 @@
  *                           (1 behind the Google load balancer, default 0)
  *   KTEMIA_RELAY_SECRET     shared with api.ktemia.com; optional
  *   KTEMIA_API_URL          upstream override, as for the stdio server
+ *   KTEMIA_OAUTH_ISSUER     this server's public origin; with the next one,
+ *                           turns on OAuth sign-in (e.g. https://mcp.ktemia.com)
+ *   KTEMIA_OAUTH_UPSTREAM   the backend's OAuth routes, .../api/v1/oauth
  */
 
 import { createServer as createNodeServer, type IncomingMessage, type ServerResponse } from "node:http";
@@ -39,10 +42,18 @@ const port = Number(process.env.PORT ?? 8080);
 const trustedHops = Number(process.env.MCP_TRUSTED_PROXY_HOPS ?? 0);
 const allowedHosts = list(process.env.MCP_ALLOWED_HOSTS, ["localhost", "127.0.0.1"]);
 
+const oauthIssuer = process.env.KTEMIA_OAUTH_ISSUER;
+const oauthUpstream = process.env.KTEMIA_OAUTH_UPSTREAM;
+if (Boolean(oauthIssuer) !== Boolean(oauthUpstream)) {
+  console.error("ktemia-mcp-http: set both KTEMIA_OAUTH_ISSUER and KTEMIA_OAUTH_UPSTREAM, or neither.");
+  process.exit(1);
+}
+
 const app = createHttpApp({
   allowedHosts,
   allowedOrigins: list(process.env.MCP_ALLOWED_ORIGINS, []),
   ...(process.env.KTEMIA_RELAY_SECRET ? { relaySecret: process.env.KTEMIA_RELAY_SECRET } : {}),
+  ...(oauthIssuer && oauthUpstream ? { oauth: { issuer: oauthIssuer, upstream: oauthUpstream } } : {}),
   onerror: (error) => console.error("ktemia-mcp-http:", error.message),
 });
 

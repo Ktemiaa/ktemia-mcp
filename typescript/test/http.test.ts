@@ -154,7 +154,7 @@ describe("credentials", () => {
     const request = new Request(URL_MCP, {
       headers: { "x-api-key": KEY_A, authorization: `Bearer ${KEY_B}` },
     });
-    assert.deepEqual(presentedKey(request), { key: KEY_A });
+    assert.deepEqual(presentedKey(request), { key: KEY_A, oauth: false });
   });
 
   test("the relay secret and caller address go upstream only when configured", async () => {
