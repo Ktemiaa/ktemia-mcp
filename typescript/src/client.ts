@@ -6,7 +6,7 @@
  * and nothing else.
  */
 
-export const VERSION = "0.1.5";
+export const VERSION = "0.1.6";
 
 const DEFAULT_BASE_URL = "https://api.ktemia.com";
 

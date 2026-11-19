@@ -8,12 +8,12 @@
     "url": "https://github.com/Ktemiaa/ktemia-mcp",
     "source": "github"
   },
-  "version": "0.1.5",
+  "version": "0.1.6",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@ktemia/mcp",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "transport": {
         "type": "stdio"
       },
@@ -30,7 +30,7 @@
     {
       "registryType": "pypi",
       "identifier": "ktemia-mcp",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "transport": {
         "type": "stdio"
       },
