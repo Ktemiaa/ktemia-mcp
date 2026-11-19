@@ -8,12 +8,12 @@
     "url": "https://github.com/Ktemiaa/ktemia-mcp",
     "source": "github"
   },
-  "version": "0.1.4",
+  "version": "0.1.5",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@ktemia/mcp",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "transport": {
         "type": "stdio"
       },
@@ -30,13 +30,28 @@
     {
       "registryType": "pypi",
       "identifier": "ktemia-mcp",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "transport": {
         "type": "stdio"
       },
       "environmentVariables": [
         {
           "name": "KTEMIA_API_KEY",
+          "description": "Your Ktemia API key. Get a free one at https://app.ktemia.com/api-keys",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.ktemia.com/mcp",
+      "headers": [
+        {
+          "name": "X-API-Key",
           "description": "Your Ktemia API key. Get a free one at https://app.ktemia.com/api-keys",
           "isRequired": true,
           "isSecret": true,

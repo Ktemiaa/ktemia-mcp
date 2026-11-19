@@ -2,9 +2,9 @@
 
 [![MCP Badge](https://lobehub.com/badge/mcp/ktemiaa-ktemia-mcp)](https://lobehub.com/mcp/ktemiaa-ktemia-mcp)
 
-A [Model Context Protocol](https://modelcontextprotocol.io/) server that searches and compares flights, hotels, and rental cars with the [Ktemia](https://www.ktemia.com/) [API](https://www.ktemia.com/docs/api/). Point Cursor, Claude Code, Claude Desktop, Codex, or any MCP client at it, ask in plain language, and the agent looks up the place, runs the search, and returns each seller's price with a booking link.
+A [Model Context Protocol](https://modelcontextprotocol.io/) server that searches and compares flights, hotels, and rental cars with the [Ktemia](https://www.ktemia.com/) [API](https://www.ktemia.com/docs/api/). Connect Cursor, Claude Code, Codex, VS Code, Claude Desktop, or any MCP client to it, ask in plain language, and the agent looks up the place, runs the search, and returns each seller's price with a booking link.
 
-Available for both Node (`npx -y @ktemia/mcp`) and Python (`uvx ktemia-mcp`).
+Hosted at `https://mcp.ktemia.com/mcp`, or run it yourself with Node (`npx -y @ktemia/mcp`) or Python (`uvx ktemia-mcp`).
 
 **[Get a free API key](https://app.ktemia.com/api-keys)** · [API reference](https://www.ktemia.com/docs/api/) · [Getting started](https://www.ktemia.com/docs/getting-started/) · [Pricing](https://www.ktemia.com/pricing/) · [Guide: flights in Cursor and Claude](https://www.ktemia.com/blog/flights-mcp/) · [Changelog](https://www.ktemia.com/docs/changelog/)
 
@@ -39,9 +39,46 @@ They are not two codebases that happen to agree. Both read one shared contract, 
 
 You need an API key from [app.ktemia.com/api-keys](https://app.ktemia.com/api-keys). Free, no card.
 
+### Hosted: nothing to install
+
+The same seven tools are served at `https://mcp.ktemia.com/mcp` over Streamable HTTP. Send your key on every request as `X-API-Key: your-key` or `Authorization: Bearer your-key`. Without one the server answers `401` and runs nothing.
+
+Cursor, in `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "ktemia": {
+      "url": "https://mcp.ktemia.com/mcp",
+      "headers": { "X-API-Key": "${env:KTEMIA_API_KEY}" }
+    }
+  }
+}
+```
+
+Claude Code:
+
+```bash
+claude mcp add --transport http ktemia https://mcp.ktemia.com/mcp --header "X-API-Key: your-key"
+```
+
+Codex CLI, in `~/.codex/config.toml` (sent as a bearer token):
+
+```toml
+[mcp_servers.ktemia]
+url = "https://mcp.ktemia.com/mcp"
+bearer_token_env_var = "KTEMIA_API_KEY"
+```
+
+VS Code, Claude.ai connectors with request headers, and other clients: see the [MCP docs](https://www.ktemia.com/docs/mcp/#hosted). ChatGPT needs OAuth sign-in, which is not available yet.
+
+The local packages below are the same server and keep working; use them for clients that cannot send a header, such as Claude Desktop's config file.
+
+### Local
+
 Each example below shows Node first, then Python. Use one, not both — two copies of the same server would just show every tool twice.
 
-### Cursor
+#### Cursor
 
 Add to `~/.cursor/mcp.json` (every project) or `.cursor/mcp.json` (one project):
 
@@ -79,7 +116,7 @@ export KTEMIA_API_KEY="your-key"
 
 To paste the key directly instead, put it in `~/.cursor/mcp.json` rather than a project file, and do not commit it.
 
-### Claude Code
+#### Claude Code
 
 ```bash
 claude mcp add ktemia -e KTEMIA_API_KEY=your-key -- npx -y @ktemia/mcp
@@ -93,7 +130,7 @@ claude mcp add ktemia -e KTEMIA_API_KEY=your-key -- uvx ktemia-mcp
 
 Everything after `--` is the command Claude Code runs. Check it with `claude mcp list`.
 
-### Claude Desktop
+#### Claude Desktop
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS, or `%APPDATA%\Claude\claude_desktop_config.json` on Windows:
 
@@ -115,7 +152,7 @@ Restart Claude Desktop, then ask for a flight.
 
 Claude Desktop launches servers from a GUI process that does not read your shell profile, so `npx` or `uvx` must be somewhere it can see. If the server fails to start, use the absolute path from `which npx` or `which uvx` as `command`.
 
-### Codex CLI
+#### Codex CLI
 
 Add to `~/.codex/config.toml`:
 
@@ -135,13 +172,13 @@ args = ["ktemia-mcp"]
 env = { KTEMIA_API_KEY = "your-key" }
 ```
 
-### Any other MCP client
+#### Any other MCP client
 
 The server speaks MCP over stdio. Run `npx -y @ktemia/mcp` or `uvx ktemia-mcp` with `KTEMIA_API_KEY` in the environment.
 
 It negotiates the protocol revision per connection, so it answers both current (`2026-07-28`) clients and clients that still open with the older `initialize` handshake.
 
-### Check it before wiring it up
+#### Check it before wiring it up
 
 Run the command in a terminal first:
 
@@ -201,9 +238,17 @@ Consider using a **separate key** for your editor, so you can revoke it without 
 
 ### A note on the hosted server
 
-A hosted server at `mcp.ktemia.com` is planned, and it will accept your API key and forward it to `api.ktemia.com`. The MCP [security guidance](https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices) names that shape "token passthrough" and advises against it, so it is worth being explicit about why it is acceptable here: the guidance targets OAuth audience confusion, where a server accepts a token minted for a different service and deceives a third-party resource server into trusting it. A Ktemia key is first-party, the MCP server is Ktemia, and the quota and rate limits live on that same key upstream — one audience, no third party, and no control bypassed. If that changes, OAuth 2.1 is the migration, and the credential source is a single seam in the code so it will not ripple into the tools.
+`mcp.ktemia.com` takes your API key and forwards it to `api.ktemia.com`. The MCP [security guidance](https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices) names that shape "token passthrough" and advises against it, so it is worth being explicit about why it is acceptable here: the guidance targets OAuth audience confusion, where a server accepts a token minted for a different service and deceives a third-party resource server into trusting it. A Ktemia key is first-party, the MCP server is Ktemia, and the quota and rate limits live on that same key upstream: one audience, no third party, and no control bypassed.
 
-Until then, run it locally over stdio as above.
+What the hosted server does with the key:
+
+- It builds a fresh server for each request, with that request's key, so one caller's key can never reach another caller's request.
+- It has no key of its own and refuses to start if one is configured, so a request without a key is refused rather than run on someone else's quota.
+- A value that is not shaped like a Ktemia key is refused before anything is sent upstream.
+- It checks `Host` and `Origin` against allowlists, against DNS rebinding.
+- Request logs record method, path, status, and duration. Headers, and so keys, are never logged.
+
+The code is [`typescript/src/http.ts`](typescript/src/http.ts). OAuth sign-in for clients that cannot send a header, such as ChatGPT, is the next step, and the credential source is a single seam in that file.
 
 ## Self-host and develop
 
