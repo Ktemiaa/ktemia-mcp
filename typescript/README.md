@@ -57,9 +57,11 @@ url = "https://mcp.ktemia.com/mcp"
 bearer_token_env_var = "KTEMIA_API_KEY"
 ```
 
-VS Code, Claude.ai connectors with request headers, and other clients: see the [MCP docs](https://www.ktemia.com/docs/mcp/#hosted). ChatGPT needs OAuth sign-in, which is not available yet.
+**Claude.ai and ChatGPT: sign in instead.** Those apps connect by URL and cannot send a header. Add `https://mcp.ktemia.com/mcp` as a custom connector and sign in to your Ktemia account when prompted — no key to create or paste. The connector is limited to the seven search tools, requests count against your normal quota, and you can disconnect it from [app.ktemia.com/api-keys](https://app.ktemia.com/api-keys).
 
-Running it locally, as below, is the same server. Use that for clients that cannot send a request header, such as Claude Desktop's config file.
+VS Code and other clients: see the [MCP docs](https://www.ktemia.com/docs/mcp/#hosted).
+
+Running it locally, as below, is the same server. Use that to run a modified build, or for stdio-only clients such as Claude Desktop.
 
 ### Local
 

@@ -70,9 +70,11 @@ url = "https://mcp.ktemia.com/mcp"
 bearer_token_env_var = "KTEMIA_API_KEY"
 ```
 
-VS Code, Claude.ai connectors with request headers, and other clients: see the [MCP docs](https://www.ktemia.com/docs/mcp/#hosted). ChatGPT needs OAuth sign-in, which is not available yet.
+**Claude.ai and ChatGPT: sign in instead.** Those apps connect by URL and cannot send a header. Add `https://mcp.ktemia.com/mcp` as a custom connector and sign in to your Ktemia account when prompted — no key to create or paste. The connector is limited to the seven search tools, requests count against your normal quota, and you can disconnect it from [app.ktemia.com/api-keys](https://app.ktemia.com/api-keys).
 
-The local packages below are the same server and keep working; use them for clients that cannot send a header, such as Claude Desktop's config file.
+VS Code and other clients: see the [MCP docs](https://www.ktemia.com/docs/mcp/#hosted).
+
+The local packages below are the same server and keep working; use them to run a modified build, or for stdio-only clients such as Claude Desktop's config file.
 
 ### Local
 
@@ -248,7 +250,7 @@ What the hosted server does with the key:
 - It checks `Host` and `Origin` against allowlists, against DNS rebinding.
 - Request logs record method, path, status, and duration. Headers, and so keys, are never logged.
 
-The code is [`typescript/src/http.ts`](typescript/src/http.ts). OAuth sign-in for clients that cannot send a header, such as ChatGPT, is the next step, and the credential source is a single seam in that file.
+The code is [`typescript/src/http.ts`](typescript/src/http.ts). It also serves OAuth 2.1 sign-in for clients that cannot send a header, such as Claude.ai and ChatGPT: `401`s carry an [RFC 9728](https://www.rfc-editor.org/rfc/rfc9728) `resource_metadata` pointer, and `/authorize`, `/token`, `/register`, `/revoke`, and the authorization server metadata are relayed to Ktemia's backend, which is where tokens are minted and checked. An OAuth access token resolves to a short-lived key record, so plan, rate limit, and monthly quota apply exactly as they do for an API key.
 
 ## Self-host and develop
 
