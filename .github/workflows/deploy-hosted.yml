@@ -1,0 +1,144 @@
+name: Deploy hosted server
+
+# Push to main -> build Dockerfile.http -> deploy to Cloud Run as the hosted
+# MCP server behind https://mcp.ktemia.com.
+#
+# Keyless: GitHub mints a short-lived OIDC token per run and Workload Identity
+# Federation exchanges it for a GCP token, so this public repo holds no
+# credential at all. The provider accepts this repository only for
+# refs/heads/main, so a fork, a pull request or another branch cannot deploy.
+#
+# The running service uses its own identity, ktemia-mcp-runtime, which can
+# read exactly one secret (the relay secret) - not the API's AWS credentials.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "typescript/**"
+      - "spec/**"
+      - "Dockerfile.http"
+      - ".github/workflows/deploy-hosted.yml"
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: project-8a62bc21-d379-4efc-9f7
+  REGION: us-central1
+  SERVICE: ktemia-mcp
+  REPOSITORY: ktemia
+  RUNTIME_SA: ktemia-mcp-runtime@project-8a62bc21-d379-4efc-9f7.iam.gserviceaccount.com
+  PUBLIC_URL: https://mcp.ktemia.com
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: typescript
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: typescript/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-hosted
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/291531832003/locations/global/workloadIdentityPools/github/providers/github-oidc
+          service_account: ktemia-deployer@project-8a62bc21-d379-4efc-9f7.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and push image
+        run: |
+          set -euo pipefail
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE}"
+          docker build -f Dockerfile.http -t "${IMAGE}:${GITHUB_SHA}" .
+          docker push "${IMAGE}:${GITHUB_SHA}"
+          echo "IMAGE=${IMAGE}:${GITHUB_SHA}" >> "$GITHUB_ENV"
+
+      - name: Deploy to Cloud Run
+        run: |
+          set -euo pipefail
+          # --ingress: only the load balancer for mcp.ktemia.com reaches the
+          # service, so MCP_TRUSTED_PROXY_HOPS=1 is exactly right and the
+          # *.run.app URL cannot be used to skip it.
+          #
+          # --timeout=300s: one search is two upstream calls of up to 60s
+          # each, and a client may chain several in one exchange.
+          #
+          # Scales to zero: the server holds no state, and a Node cold start
+          # is about a second.
+          gcloud run deploy "${SERVICE}" \
+            --image="${IMAGE}" \
+            --project="${PROJECT_ID}" \
+            --region="${REGION}" \
+            --platform=managed \
+            --service-account="${RUNTIME_SA}" \
+            --allow-unauthenticated \
+            --ingress=internal-and-cloud-load-balancing \
+            --port=8080 \
+            --cpu=1 \
+            --memory=512Mi \
+            --timeout=300s \
+            --concurrency=80 \
+            --min-instances=0 \
+            --max-instances=10 \
+            --set-secrets=KTEMIA_RELAY_SECRET=KTEMIA_RELAY_SECRET:latest \
+            --set-env-vars="MCP_ALLOWED_HOSTS=mcp.ktemia.com,MCP_TRUSTED_PROXY_HOPS=1" \
+            --quiet
+
+      - name: Verify the new revision serves traffic
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            code="$(curl -s -o /tmp/health -w '%{http_code}' "${PUBLIC_URL}/health" || echo 000)"
+            if [ "${code}" = "200" ] && grep -q "\"version\"" /tmp/health; then
+              echo "health OK: $(cat /tmp/health)"
+              # The endpoint must refuse a caller without a key.
+              unauth="$(curl -s -o /dev/null -w '%{http_code}' -X POST "${PUBLIC_URL}/mcp" \
+                -H 'content-type: application/json' \
+                -H 'accept: application/json, text/event-stream' \
+                -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}')"
+              if [ "${unauth}" != "401" ]; then
+                echo "Unauthenticated /mcp returned ${unauth}, expected 401" >&2
+                break
+              fi
+              echo "### Deployed ${PUBLIC_URL}" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "attempt ${attempt}: HTTP ${code}, retrying"
+            sleep 10
+          done
+
+          echo "Verification failed; rolling back." >&2
+          PREV="$(gcloud run revisions list --service="${SERVICE}" \
+            --project="${PROJECT_ID}" --region="${REGION}" \
+            --format='value(metadata.name)' --sort-by='~metadata.creationTimestamp' \
+            | sed -n '2p')"
+          if [ -n "${PREV}" ]; then
+            gcloud run services update-traffic "${SERVICE}" \
+              --project="${PROJECT_ID}" --region="${REGION}" \
+              --to-revisions="${PREV}=100" --quiet
+            echo "Rolled back to ${PREV}" >&2
+          fi
+          exit 1

@@ -1,0 +1,23 @@
+# Ktemia MCP server, hosted over Streamable HTTP (mcp.ktemia.com).
+# Same build as the stdio image; the entry point is the HTTP server, which
+# acts only on each caller's own API key and refuses to start with one of
+# its own. Configure with the environment variables listed in
+# typescript/src/http-main.ts.
+
+FROM node:22-alpine AS build
+WORKDIR /app/typescript
+COPY typescript/package.json typescript/package-lock.json ./
+RUN npm ci --ignore-scripts
+COPY spec/ /app/spec/
+COPY typescript/ ./
+RUN npm run build && npm prune --omit=dev
+
+FROM node:22-alpine
+ENV NODE_ENV=production PORT=8080
+WORKDIR /app/typescript
+COPY --from=build /app/typescript/package.json ./
+COPY --from=build /app/typescript/node_modules ./node_modules
+COPY --from=build /app/typescript/dist ./dist
+USER node
+EXPOSE 8080
+ENTRYPOINT ["node", "dist/http-main.js"]

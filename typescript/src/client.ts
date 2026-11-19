@@ -49,6 +49,13 @@ export interface ClientOptions {
   baseUrl?: string;
   /** Per-request timeout. Searches are the slow path; 60s is above the upstream ceiling. */
   timeoutMs?: number;
+  /**
+   * Hosted transport only: names the address of the user being relayed for,
+   * so the API throttles each user on their own address rather than all of
+   * them on this server's. The API believes it only alongside the shared
+   * relay secret, which only the hosted deployment holds.
+   */
+  relay?: { secret: string; clientIp: string };
 }
 
 function resolveApiKey(explicit?: string): string {
@@ -106,11 +113,18 @@ export class KtemiaClient {
   private readonly apiKey: string;
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
+  private readonly relayHeaders: Record<string, string>;
 
   constructor(options: ClientOptions = {}) {
     this.apiKey = resolveApiKey(options.apiKey);
     this.baseUrl = resolveBaseUrl(options.baseUrl);
     this.timeoutMs = options.timeoutMs ?? 60_000;
+    this.relayHeaders = options.relay
+      ? {
+          "X-Ktemia-Relay-Secret": options.relay.secret,
+          "X-Ktemia-Client-IP": options.relay.clientIp,
+        }
+      : {};
   }
 
   async get<T = unknown>(
@@ -154,6 +168,7 @@ export class KtemiaClient {
           // Lets us attribute MCP traffic separately from direct API calls.
           "X-Ktemia-Client": `mcp/${VERSION}`,
           Accept: "application/json",
+          ...this.relayHeaders,
           ...(opts.body !== undefined
             ? { "Content-Type": "application/json" }
             : {}),
