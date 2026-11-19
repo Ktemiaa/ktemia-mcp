@@ -6,6 +6,8 @@ Ktemia compares prices. It does not book the ticket, the car, or the room. The t
 
 This is the Python package. A TypeScript package, [`@ktemia/mcp`](https://www.npmjs.com/package/@ktemia/mcp), exposes the same seven tools with the same descriptions and the same behaviour — both read one shared contract file, so pick whichever runtime you already have.
 
+This package runs the server on your machine over stdio. There is also a hosted server at `https://mcp.ktemia.com/mcp` with the same seven tools and nothing to install — see [Hosted](#hosted-nothing-to-install) below.
+
 **[Get a free API key](https://app.ktemia.com/api-keys)** · [API reference](https://www.ktemia.com/docs/api/) · [Getting started](https://www.ktemia.com/docs/getting-started/) · [Pricing](https://www.ktemia.com/pricing/) · [Guide: flights in Cursor and Claude](https://www.ktemia.com/blog/flights-mcp/) · [Changelog](https://www.ktemia.com/docs/changelog/)
 
 | Tool | Use it for |
@@ -24,6 +26,43 @@ Every plan can use the MCP server, including the [Free plan](https://www.ktemia.
 
 You need an API key from [app.ktemia.com/api-keys](https://app.ktemia.com/api-keys). Free, no card.
 
+### Hosted: nothing to install
+
+The same seven tools are served at `https://mcp.ktemia.com/mcp` over Streamable HTTP, so there is no Python environment to set up. Send your key on every request as `X-API-Key: your-key` or `Authorization: Bearer your-key`. Without one the server answers `401` and runs nothing.
+
+Cursor, in `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "ktemia": {
+      "url": "https://mcp.ktemia.com/mcp",
+      "headers": { "X-API-Key": "${env:KTEMIA_API_KEY}" }
+    }
+  }
+}
+```
+
+Claude Code:
+
+```bash
+claude mcp add --transport http ktemia https://mcp.ktemia.com/mcp --header "X-API-Key: your-key"
+```
+
+Codex CLI, in `~/.codex/config.toml` (sent as a bearer token):
+
+```toml
+[mcp_servers.ktemia]
+url = "https://mcp.ktemia.com/mcp"
+bearer_token_env_var = "KTEMIA_API_KEY"
+```
+
+VS Code, Claude.ai connectors with request headers, and other clients: see the [MCP docs](https://www.ktemia.com/docs/mcp/#hosted). ChatGPT needs OAuth sign-in, which is not available yet.
+
+Running this package locally, as below, is the same server. Use that for clients that cannot send a request header, such as Claude Desktop's config file, or when you would rather the key never left your machine.
+
+### Local
+
 You also need [`uv`](https://docs.astral.sh/uv/), which ships `uvx`. `uvx` downloads the package into a throwaway environment and runs it, so there is nothing to install or keep updated:
 
 ```bash
@@ -39,7 +78,7 @@ KTEMIA_API_KEY=your-key uvx ktemia-mcp
 
 It should sit silently waiting for JSON-RPC on stdin; `Ctrl-C` to quit. An immediate error means the environment is wrong, and fixing it here is easier than through a client's logs.
 
-### Cursor
+#### Cursor
 
 Add to `~/.cursor/mcp.json` (every project) or `.cursor/mcp.json` (one project):
 
@@ -63,13 +102,13 @@ export KTEMIA_API_KEY="your-key"
 
 To paste the key directly instead, put it in `~/.cursor/mcp.json` rather than a project file, and do not commit it.
 
-### Claude Code
+#### Claude Code
 
 ```bash
 claude mcp add ktemia -e KTEMIA_API_KEY=your-key -- uvx ktemia-mcp
 ```
 
-### Claude Desktop
+#### Claude Desktop
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS, or `%APPDATA%\Claude\claude_desktop_config.json` on Windows:
 
@@ -89,7 +128,7 @@ Restart Claude Desktop, then ask for a flight.
 
 Claude Desktop launches servers from a GUI process that does not read your shell profile, so `uvx` must be on a system path it can see. If the server fails to start, use the absolute path from `which uvx` as `command`.
 
-### Codex CLI
+#### Codex CLI
 
 Add to `~/.codex/config.toml`:
 
@@ -100,13 +139,13 @@ args = ["ktemia-mcp"]
 env = { KTEMIA_API_KEY = "your-key" }
 ```
 
-### Any other MCP client
+#### Any other MCP client
 
 The server speaks MCP over stdio. Run `uvx ktemia-mcp` with `KTEMIA_API_KEY` in the environment.
 
 It negotiates the protocol revision per connection, so it answers both current (`2026-07-28`) clients and clients that still open with the older `initialize` handshake.
 
-### Without uv
+#### Without uv
 
 `pipx run ktemia-mcp` works the same way. Or install it into an environment you control and use the absolute path to the installed script, which avoids a per-launch resolution step:
 
@@ -155,13 +194,19 @@ Limits per plan are on [pricing](https://www.ktemia.com/pricing/).
 
 ## Security
 
-- The key is read from `KTEMIA_API_KEY` and sent only as the `X-API-Key` header, over HTTPS, to `https://api.ktemia.com`.
+- Running locally, the key is read from `KTEMIA_API_KEY` and sent only as the `X-API-Key` header, over HTTPS, to `https://api.ktemia.com`.
 - The key is never a tool parameter. An agent should never ask you to paste it into a tool call, and the server never exposes it in a result.
 - A `KTEMIA_API_URL` override must be `https://` (or localhost, for development), and redirects are refused, so the key cannot be sent to another host.
 - Upstream calls carry `X-Ktemia-Client: mcp/<version>`, so MCP traffic is distinguishable from direct API traffic in Ktemia's own logs.
 - Every tool is read-only. Nothing here books, pays, holds, or cancels anything.
 
 Consider using a **separate key** for your editor, so you can revoke it without touching a production integration. The quota is per account, so a second key costs you nothing in allowance.
+
+### A note on the hosted server
+
+The hosted server at `mcp.ktemia.com` accepts your API key and forwards it to `api.ktemia.com`. The MCP [security guidance](https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices) names that shape "token passthrough" and advises against it, so it is worth being explicit about why it is acceptable here: the guidance targets OAuth audience confusion, where a server accepts a token minted for a different service and deceives a third-party resource server into trusting it. A Ktemia key is first-party, the MCP server is Ktemia, and the quota and rate limits live on that same key upstream — one audience, no third party, and no control bypassed.
+
+The key is used for the request it arrives on and is not stored. Request logs record the method, path, and status, never headers. The server holds no key of its own, so a request without one is refused rather than run on someone else's quota. Running this package locally keeps the key on your own machine, which is the stronger option where your client supports it.
 
 ## Use it as a library
 
