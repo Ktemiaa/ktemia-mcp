@@ -1,5 +1,7 @@
 # Ktemia MCP server
 
+[![MCP Badge](https://lobehub.com/badge/mcp/ktemiaa-ktemia-mcp)](https://lobehub.com/mcp/ktemiaa-ktemia-mcp)
+
 A [Model Context Protocol](https://modelcontextprotocol.io/) server that searches and compares flights, hotels, and rental cars with the [Ktemia](https://www.ktemia.com/) [API](https://www.ktemia.com/docs/api/). Point Cursor, Claude Code, Claude Desktop, Codex, or any MCP client at it, ask in plain language, and the agent looks up the place, runs the search, and returns each seller's price with a booking link.
 
 Available for both Node (`npx -y @ktemia/mcp`) and Python (`uvx ktemia-mcp`).
